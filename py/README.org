@@ -1,0 +1,22 @@
+#+TITLE: Polygonsoup - Python
+
+A collection of plotter-friendly utilities.
+
+* Requirements
+The dependencies of this package depend on the module. The basic requirements for all modules are
+[https://numpy.org/][NumPy] and [https://matplotlib.org][Matplotlib].
+
+** Module specific reqirements
+- ~polygonsoup.clipper~ depends on the [https://pypi.org/project/pyclipper/][PyClipper] package.
+- ~polygonsoup.limb~ depends on the [https://github.com/neka-nat/kinpy][KinPy] package, which in turn depends on [https://vtk.org][VTK]. The latest version of KinPy can be installed with pip through:
+  - ~pip install git+https://github.com/neka-nat/kinpy.git~
+  - If using Anaconda, it is suggested to first install VTK with
+    - ~conda install -c conda-forge vtk~
+- The ~./examples/vtk_contour_lines.py~ example depends on VTK.
+
+* Install
+To install locally use
+#+begin_example
+pip install -e .
+#+end_example
+From the ~py~ directory in the repository.
