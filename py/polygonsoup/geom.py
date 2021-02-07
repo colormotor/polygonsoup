@@ -516,6 +516,18 @@ class shapes:
         return [vec(np.cos(th), np.sin(th))*r + center
             for th in np.linspace(0, np.pi*2, subd)]
 
+    @staticmethod
+    def random_radial_polygon(n, min_r=0.5, max_r=1., center=[0,0]):
+        import polygonsoup.numeric as numeric
+        R = np.random.uniform(min_r, max_r, n)
+        start = np.random.uniform(0., np.pi*2)
+        Theta = numeric.randspace(start, start+np.pi*2, n+1)
+        Theta = Theta[:-1] # skip last one
+        V = np.zeros((n,2))
+        V[:,0] = np.cos(Theta) * R + center[0]
+        V[:,1] = np.sin(Theta) * R + center[1]
+        return V
+
 
 plane_xy = (vec(1,0,0), vec(0,1,0))
 plane_xz = (vec(1,0,0), vec(0,0,1))
