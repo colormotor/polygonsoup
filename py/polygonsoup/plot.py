@@ -3,8 +3,10 @@
 
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+from matplotlib.patches import Path, PathPatch
 import numpy as np
 import matplotlib as mpl
+import polygonsoup.geom as geom
 
 cfg = lambda: None
 cfg.dpi = 150
@@ -64,16 +66,45 @@ def set_theme(style=cfg.default_style, fontsize=6):
 set_theme()
 
 
-def stroke(S, clr, linewidth=0.75, alpha=1.):
+def stroke(S, clr, linewidth=0.75, alpha=1., zorder=None):
     if not S:
         # print('Empty shape')
         return
-    if type(S[0])==list:
+    if geom.is_compound(S):
         for P in S:
             stroke(P, clr, linewidth, alpha=alpha)
         return
     P = np.array(S).T
-    plt.plot(P[0], P[1], clr, linewidth=linewidth)
+    plt.plot(P[0], P[1], clr, linewidth=linewidth, zorder=zorder)
+
+def fill(S, clr, alpha=1., zorder=None):
+    if not S:
+        # print('Empty shape')
+        return
+    if not geom.is_compound(S):
+        S = [S]
+
+    path = []
+    cmds = []
+    for P in S:
+        path += [p for p in P] + [P[0]]
+        cmds += [Path.MOVETO] + [Path.LINETO for p in P[:-1]] + [Path.CLOSEPOLY]
+    plt.gca().add_patch(PathPatch(Path(path, cmds), color=clr, alpha=alpha, fill=True,  linewidth=0, zorder=zorder))
+
+def fill_stroke(S, clr, strokeclr, linewidth=0.75, alpha=1., zorder=None):
+    if not S:
+        # print('Empty shape')
+        return
+    if not geom.is_compound(S):
+        S = [S]
+
+    path = []
+    cmds = []
+    for P in S:
+        path += [p for p in P] + [P[0]]
+        cmds += [Path.MOVETO] + [Path.LINETO for p in P[:-1]] + [Path.CLOSEPOLY]
+    plt.gca().add_patch(PathPatch(Path(path, cmds), facecolor=clr, edgecolor=strokeclr, alpha=alpha, fill=True,  linewidth=linewidth, zorder=zorder))
+
 
 def stroke_rect(rect, clr, alpha=1., linestyle=None, zorder=None):
     x, y = rect[0]

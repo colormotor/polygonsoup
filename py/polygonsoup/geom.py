@@ -4,6 +4,7 @@ import numpy as np
 from numpy import (sin, cos, tan)
 from numpy.linalg import (norm, det, inv)
 import numbers
+import pdb
 
 def is_number(x):
     return isinstance(x, numbers.Number)
@@ -391,7 +392,7 @@ def clip_poly_3d(P):
             add_segment()
     return Pc
 
-def view_3d(polyline, modelview, projection, viewport=[vec(-1,-1), (1,1)], clip=True):
+def view_3d(polyline, modelview, projection, viewport=[vec(-1,-1), (1,1)], clip=True, get_normalized_coords=False):
     ''' Compute 3D viewing transformation for a list of polylines
     Input:
     polylone: 1 or a list of polylines
@@ -406,9 +407,19 @@ def view_3d(polyline, modelview, projection, viewport=[vec(-1,-1), (1,1)], clip=
 
 
     if is_compound(polyline):
-        segments = [pts for pts in
-             [view_3d(pts, modelview, projection, viewport, clip) for pts in polyline]
-               if pts]
+        segments = []
+        Z = []
+        for pts in polyline:
+            if not pts:
+                continue
+            all = view_3d(pts, modelview, projection, viewport, clip, get_normalized_coords)
+            if get_normalized_coords:
+                segments.append(all[0])
+                Z.append(all[1])
+            else:
+                segments.append(all)
+        if get_normalized_coords:
+            return sum(segments, []), sum(Z, [])
         return sum(segments, [])
 
     w, h = rect_w(viewport), rect_h(viewport)
@@ -429,7 +440,10 @@ def view_3d(polyline, modelview, projection, viewport=[vec(-1,-1), (1,1)], clip=
     else:
         Pc = [Pw]
     Pv = [[to_screen(p) for p in seg] for seg in Pc]
-
+    #pdb.set_trace()
+    if get_normalized_coords:
+        Z = [[p[:3]/p[3] for p in seg] for seg in Pc]
+        return Pv, Z
     return Pv
 
 # Generates shapes (as polylines, 2d and 3d)

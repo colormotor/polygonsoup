@@ -10,6 +10,8 @@ cfg = lambda: None
 cfg.scale = 10000
 
 def ensure_list(v):
+    if not v:
+        return v
     if not is_compound(v):
         return [v]
     return v
@@ -83,7 +85,7 @@ def op(op_type, A, B, a_closed=True, b_closed=True, clip_type='nonzero'):
         res = conv_from(solution)
     except clip.ClipperException as e:
         print(e)
-        pdb.set_trace()
+        #pdb.set_trace()
         print('Clipper failed, returning first term')
         return conv_from(A)
     return res
