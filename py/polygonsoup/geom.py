@@ -281,6 +281,22 @@ def scaling_3d(s, affine=True):
     m[2,2] = s[2]
     return m
 
+def parallel(aspect, znear=0.1, zfar=1000):
+    w = aspect
+    h = 1
+    l, r, b, t = -w, w, -h, h
+    n, f = znear, zfar
+    m = np.eye(4)
+
+    m[0, 0] = 2. / (r - l)
+    m[1, 1] = 2. / (t - b)
+    m[2, 2] = -2. / (f - n)
+
+    m[0, 3] = -(r + l) / (r - l)
+    m[1, 3] = -(t + b) / (t - b)
+    m[2, 3] = -(f + n) / (f - n)
+    return m
+
 def perspective(fov, aspect, znear=0.1, zfar=1000):
     m = np.zeros((4,4))
     yscale = 1.0 / tan(fov/2)

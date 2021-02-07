@@ -19,4 +19,37 @@ To install locally use
 #+begin_example
 pip install -e .
 #+end_example
-From the ~py~ directory in the repository.
+From the ~py~ directory in the repository. This will create a symbolic link to the location of the ~py/polygonsoup~ directory, allowing a user to modify the source code if necessary.
+
+* Usage
+Plotters basically can just trace 2D lines, so the main objects in this package
+are a polylines. Points, vectors, and matrices are represented as NumPy arrays.
+Polylines are represented as a list of points optionally as a ~N*D~ ~ndarray~,
+where ~N~ is the number of points and ~D~ is the number of coordinates in a
+point (2 or 3). A /compound/ polyline is a list of polylines.
+
+*** ~geom~
+The ~geom~ module contains utilities to process polylines (compound or not), as
+well as basic homogeneous transformation matrices. Points, polylines and
+compound polylines can be transformed with the same ~geom.affine_transform~
+function.
+
+**** 3D viewing
+This module also contains a rudimentary line-based 3d graphics
+pipeline, which is implemented in the ~geom.view_3d~ function. The function
+transforms 3d polylines into 2d ones, given a view and a projection matrix. The
+projection can be either a perspective projection (~geom.perspective~) or
+parallel projection (~geom.parallel~).
+
+*** ~clipper~
+The ~clipper~ module provides utilities to clip or to perform boolean operations
+with polylines. It simply wraps the [[http://www.angusj.com/delphi/clipper.php][Clipper]] library and requires the [[https://pypi.org/project/pyclipper/][PyClipper]]
+package to be installed. See [[https://github.com/colormotor/polygonsoup/blob/main/py/examples/boolean_ops.py][examples/boolean_ops.py]] for a usage example.
+
+*** ~limb~
+The limb module provides utilities to perform forward and inverse kinematics on
+a kinematic chain. The chain can be loaded from a URDF or SDF file with the
+~limb.Limb~ class. The module wraps relies on the [[https://github.com/neka-nat/kinpy][KinPy]] package for loading,
+forward kinematics and Jacobian computation, while the ~Limb~ class provides two
+functions to compute inverse kinematics (~ik~ and ~ik_soft~).
+See [[https://github.com/colormotor/polygonsoup/blob/main/py/examples/forward_kinematics.py][examples/forward_kinematics.py]] and [[https://github.com/colormotor/polygonsoup/blob/main/py/examples/inverse_kinematics.py][examples/inverse_kinematics.py]] for usage examples.

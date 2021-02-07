@@ -24,11 +24,13 @@ hexagon = [vec(np.cos(th)*1.5, -0.5, np.sin(th)*1.5) for th in np.linspace(0, np
 S.append(hexagon)
 
 # Camera transformation
+np.random.seed(10)
 view = (trans_3d(vec(0,0,-2.5)) @
         rotx_3d(0.2) @
         roty_3d(np.random.uniform(-1,1)*0.7))
-# Perspective matrix
-proj = perspective(geom.radians(60), rect_aspect(viewport), 0.1)
+# Projection matrix (switch between perspective and parallel)
+#proj = perspective(geom.radians(60), rect_aspect(viewport))
+proj = geom.parallel(rect_aspect(viewport)) #1, 1)
 # Viewport transformations 3d -> 2d
 Sv = view_3d(S, view, proj, viewport, clip=True) # clip True/False enables/disables viewport clipping
 
