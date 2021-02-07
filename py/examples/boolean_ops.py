@@ -20,7 +20,8 @@ S = [shapes.circle(vec(0,0), 10), shapes.circle(vec(5,0), 10)]
 Si = clip.intersection(S[0], S[1])
 hatches = hatch.hatch(Si, 0.5)
 # Clip a polyline with the two circles
-poly = np.vstack([np.linspace(-20, 20, 20), np.random.uniform(-4, 4, 20)]).T
+n = 30
+poly = np.vstack([np.linspace(-20, 20, n), np.random.uniform(-4, 4, n)]).T
 segs = clip.difference(poly, S, False, True)
 
 # Add polylines

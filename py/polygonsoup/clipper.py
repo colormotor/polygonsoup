@@ -88,7 +88,6 @@ def op(op_type, A, B, a_closed=True, b_closed=True, clip_type='nonzero'):
         return conv_from(A)
     return res
 
-
 def intersection(A, B, a_closed=True, b_closed=True, clip_type='nonzero'):
     A = ensure_list(A)
     B = ensure_list(B)

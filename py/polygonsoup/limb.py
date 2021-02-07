@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+''' Wrapper around kinpy: https://github.com/neka-nat/kinpy
+with custom IK solutions'''
+
 import numpy as np
 import kinpy as kp
 import transformations as tf
@@ -15,14 +18,12 @@ def quaternion_log( q ):
     """Implements the logarithmic map, which converts a quaternion to axis-angle
         representation. Joao Silverio
      """
-
     n = np.linalg.norm(q)
     if n > 0.00001:
         q = q/n
 
     v = q[3]
     u = q[0:3]
-
     a = np.zeros(3)
     nu = np.linalg.norm(u)
 
@@ -139,7 +140,7 @@ class Limb:
         return np.maximum( np.minimum(q, self.joint_max - eps), self.joint_min + eps)
 
     def ik(self, q, x, xh, kp=1, kpa=0.0, reg=0.001):
-        #pdb.set_trace()
+        ''' Damped pseudoinverse solution'''
         dx = pose_diff(xh, x)
         xpe  = dx[:3] * kp
         xae = dx[3:] * kpa
@@ -153,27 +154,27 @@ class Limb:
               k_orientation=0.1, # orientation weight in null space
               kp=1, kpa=0,
               reg=0.0):
-
+        ''' Weighted solution using gradient projection to track orientation
+        Similar to Berio, Calinon, Leymarie (2017) Learning dynamic graffiti strokes with a compliant robot
+        https://www.doc.gold.ac.uk/autograff/post/papers/Berio-IROS2016.pdf
+        '''
         if w is None:
             w = np.ones_like(q)
-
-        #pdb.set_trace()
         dx = pose_diff(xh, x)
 
         xe  = dx[:3] * kp
         xae = dx[3:] * kpa
 
         J  = self.position_jacobian(q)
-        Ja = self.orientation_jacobian(q)
         Jinv  = weighted_pinv(J, w, reg)
-        Jainv = weighted_pinv(Ja, w, reg)
-
-        N = np.eye(q.size) - J.T @ Jinv.T
-
         dq = Jinv @ xe
 
-        # gradient projection for orientation
+        # gradient projection for
+        Ja = self.orientation_jacobian(q)
+        Jainv = weighted_pinv(Ja, w, reg)
+        N = np.eye(q.size) - J.T @ Jinv.T
         dqa = N @ Jainv @ xae
+
         dq += dqa
 
         return dq
@@ -182,7 +183,8 @@ class Limb:
         return self.joint_mean + np.random.uniform(0, 1, self.joint_mean.size)*(self.joint_max - self.joint_min)*0.5*safe_range
 
     def ik_guess( self, xh, qh=None, k=0.1, eps = 0.001, maxiter=1000, w=None ):
-        q = np.arrat(self.q)
+        '''TODO: Test me'''
+        q = np.array(self.q)
 
         for i in range(maxiter):
             for j in range(maxiter):
