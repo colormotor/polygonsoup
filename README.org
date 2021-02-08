@@ -1,1 +1,14 @@
 #+TITLE: Polygonsoup - Plotter-friendly graphics utilities
+
+This repository contains three main components:
+- *polygonsoup Python package and example scripts*
+  + https://github.com/colormotor/polygonsoup/tree/main/py
+- *AxiDraw TCP/IP server*
+  + https://github.com/colormotor/polygonsoup/tree/main/py/server
+- *Matlab axidraw client*
+  + https://github.com/colormotor/polygonsoup/tree/main/matlab
+
+The [[https://github.com/colormotor/polygonsoup/tree/main/py][polysoup]] package contains utilities to generate visualise and plot vector
+graphics. The [[https://github.com/colormotor/polygonsoup/tree/main/py/server][AxiDraw server]] allows sending drawings to the AxiDraw through a
+network socket. The [[https://github.com/colormotor/polygonsoup/tree/main/matlab][Matlab client]] allows to send drawings to the server from
+Matlab.
