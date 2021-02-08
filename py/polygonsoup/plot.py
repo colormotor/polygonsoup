@@ -7,11 +7,19 @@ from matplotlib.patches import Path, PathPatch
 import numpy as np
 import matplotlib as mpl
 import polygonsoup.geom as geom
+import polygonsoup.plotters as plotters
 
 cfg = lambda: None
-cfg.dpi = 150
+cfg.dpi = 100
 # Make it a bit prettier
 cfg.default_style = 'seaborn-darkgrid'
+cfg.plotter = None
+
+paper_sizes = {
+    'A4': (11.7, 8.3),
+    'A3': (16.5, 11.7),
+    'A5': (8.3, 5.8)
+}
 
 def set_theme(style=cfg.default_style, fontsize=6):
     if style:
@@ -66,14 +74,18 @@ def set_theme(style=cfg.default_style, fontsize=6):
 set_theme()
 
 
-def stroke(S, clr, linewidth=0.75, alpha=1., zorder=None):
-    if not S:
+def stroke(S, clr='k', linewidth=0.75, alpha=1., zorder=None):
+    if type(S)==list and not S:
         # print('Empty shape')
         return
     if geom.is_compound(S):
         for P in S:
             stroke(P, clr, linewidth, alpha=alpha)
         return
+
+    # Send out
+    cfg.plotter._stroke(S)
+
     P = np.array(S).T
     plt.plot(P[0], P[1], clr, linewidth=linewidth, zorder=zorder)
 
@@ -101,14 +113,22 @@ def fill_stroke(S, clr, strokeclr, linewidth=0.75, alpha=1., zorder=None):
     path = []
     cmds = []
     for P in S:
+        # Send out
+        cfg.plotter.stroke(P)
+
         path += [p for p in P] + [P[0]]
         cmds += [Path.MOVETO] + [Path.LINETO for p in P[:-1]] + [Path.CLOSEPOLY]
     plt.gca().add_patch(PathPatch(Path(path, cmds), facecolor=clr, edgecolor=strokeclr, alpha=alpha, fill=True,  linewidth=linewidth, zorder=zorder))
 
 
-def stroke_rect(rect, clr, alpha=1., linestyle=None, zorder=None):
+def stroke_rect(rect, clr='k', alpha=1., linestyle=None, zorder=None, plot=True):
     x, y = rect[0]
     w, h = rect[1] - rect[0]
+
+    # Send out
+    if plot:
+        cfg.plotter._stroke(geom.rect_corners(rect, close=True))
+
     plt.gca().add_patch(
         patches.Rectangle((x, y), w, h, fill=False, linestyle=linestyle, edgecolor=clr, zorder=zorder, alpha=alpha))
 
@@ -118,42 +138,57 @@ def fill_rect(rect, clr, alpha=1., zorder=None):
     plt.gca().add_patch(
         patches.Rectangle((x, y), w, h, fill=True, facecolor=clr, alpha=alpha, zorder=zorder))
 
-def figure(w=None, h=None):
-    if w==None and h==None:
-        fig = plt.figure()
-    if h==None:
-        h = w
-    fig = figure_inches(w, h)
-    return fig
-
-def figure_inches(w, h):
-    fig = plt.figure(dpi=cfg.dpi)
-    fig.set_size_inches(w, h)
-    return fig
-
-def setup(axis=False, ydown=True, axis_limits=None, equal=True, ax=None):
+def set_axis_limits(box, pad=0, invert=True, ax=None, y_limits_only=False):
+    # UNUSED
     if ax is None:
         ax = plt.gca()
 
-    # save it for later
-    if equal:
-        #ax.axis('equal')
-        ax.axis('scaled')
+    xlim = [box[0][0]-pad, box[1][0]+pad]
+    ylim = [box[0][1]-pad, box[1][1]+pad]
+    ax.set_ylim(ylim)
+    ax.set_ybound(ylim)
+
+    # Hack to get matplotlib to actually respect limits?
+    stroke_rect([geom.vec(xlim[0], ylim[0]), geom.vec(xlim[1], ylim[1])], 'r', alpha=0, plot=False)
+    # ax.set_clip_on(True)
+    if invert:
+        ax.invert_yaxis()
+
+def show_drawing(drawing, size='A4', title='', padding=0, plotter=plotters.NoPlotter()):
+    ''' Plots/draws a axi.Drawing object'''
+    figure(size, plotter)
+    for path in drawing.paths:
+        P = [np.array(p) for p in path]
+        stroke(P, 'k')
+    show(title, padding)
+
+def figure(size="A4", plotter=plotters.NoPlotter()):
+    if type(size)==str:
+        w, h = paper_sizes[size]
+    else:
+        w, h = size
+    fig = plt.figure(dpi=cfg.dpi)
+    fig.set_size_inches(w, h)
+    if plotter is None:
+        plotter = plotters.NoPlotter()
+    cfg.plotter = plotter
+    plotter._set_bounds(w, h)
+    return fig
+
+def show(title='', padding=0, axis=False, ydown=True, file=''):
+    if title:
+        plt.title(title)
+
+    ax = plt.gca()
+    ax.axis('scaled')
     if not axis:
         ax.axis('off')
     else:
         ax.axis('on')
     if ydown:
         ax.invert_yaxis()
-
-    if axis_limits is not None:
-        set_axis_limits(axis_limits, invert=ydown, ax=ax)
-
-
-def show(axis=False, ydown=True, file='', axis_limits=None, title=''):
-    if title:
-        plt.title(title)
-    setup(axis, ydown, axis_limits=axis_limits)
     if file:
         plt.savefig(file, transparent=True)
+
+    cfg.plotter._plot(title, padding)
     plt.show()
