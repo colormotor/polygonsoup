@@ -7,8 +7,13 @@ The dependencies of this package depend on the module. The basic requirements fo
 [[https://numpy.org/][NumPy]] and [[https://matplotlib.org][Matplotlib]].
 
 ** Module specific reqirements
+- ~polyhonsoup.svg~ depends on [[https://github.com/mathandy/svgpathtools.git][svgpathtools]]
+  - It is suggested to install the latest version with
+    + ~pip install git+https://github.com/mathandy/svgpathtools.git~
 - ~polygonsoup.clipper~ depends on the [[https://pypi.org/project/pyclipper/][PyClipper]] package.
-  - It can be installed with ~conda install -c conda-forge pyclipper~ if using conda, or ~pip install pyclipper~ if using clipper.
+  - It can be installed with
+    + ~conda install -c conda-forge pyclipper~ if using conda
+    + or ~pip install pyclipper~ if using clipper.
 - ~polygonsoup.limb~ depends on the [[https://github.com/neka-nat/kinpy][KinPy]] package, which in turn depends on [[https://vtk.org][VTK]]. The latest version of KinPy can be installed with pip through:
   - ~pip install git+https://github.com/neka-nat/kinpy.git~
   - If using Anaconda, it is suggested to first install VTK with
