@@ -65,9 +65,15 @@ class AxiPlotter:
 
 class AxiDrawClient:
     ''' Plots to a remote instance of axidraw_server.py'''
-    def __init__(self, address='localhost', port=80, raw=False): #, blocking=False):
-        self.address = address
-        self.port = port
+    def __init__(self, address_or_settings='./client_settings.json', port=80, raw=False): #, blocking=False):
+        if '.json' in address_or_settings:
+            import json
+            settings = json.loads(open(address_or_settings).read())
+            self.address = settings['address']
+            self.port = settings['port']
+        else:
+            self.address = address_or_settings
+            self.port = port
         self.socket_open = False
         self.sock = None
         self.paths = []

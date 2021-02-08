@@ -63,7 +63,7 @@ if clip_contours:
 
     contours_v = clip_sorted(contours_v)
 
-plotter = plotters.AxiDrawClient('localhost') # Socket connection to axidraw_server.py
+plotter = plotters.AxiDrawClient() # Socket connection to axidraw_server.py
 #plotter = plotters.AxiPlotter() # Direct connection to AxiDraw using axi module
 #plotter = plotters.NoPlotter() # Simply draws output
 

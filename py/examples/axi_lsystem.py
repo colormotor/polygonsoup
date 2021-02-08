@@ -28,7 +28,7 @@ def main():
     # NB: The following needs Cairo to work
     # d.render(bounds=axi.V3_BOUNDS).write_to_png('out.png')
 
-    plotter = plotters.AxiDrawClient('localhost') # Socket connection to axidraw_server.py
+    plotter = plotters.AxiDrawClient() # Socket connection to axidraw_server.py
     #plotter = plotters.AxiPlotter() # Direct connection to AxiDraw using axi module
     #plotter = plotters.NoPlotter() # Simply draws output
     plot.show_drawing(d, size='A5', title='L-system', plotter=plotter)

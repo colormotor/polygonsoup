@@ -7,7 +7,8 @@ import numpy as np
 import polygonsoup.geom as geom
 import polygonsoup.plot as plot
 import polygonsoup.hatch as hatch
-reload(geom); reload(plot); reload(hatch)
+import polygonsoup.plotters as  plotters
+
 from polygonsoup.geom import (vec,
                               make_rect, rect_aspect,
                               shapes,
@@ -37,6 +38,10 @@ view = (trans_3d(vec(0,0,-2.5)) @
 proj = perspective(geom.radians(60), rect_aspect(viewport), 0.1)
 # Viewport transformations 3d -> 2d
 Sv = view_3d(S, view, proj, viewport, clip=True) # clip True/False enables/disables viewport clipping
+
+plotter = plotters.AxiDrawClient() # Socket connection to axidraw_server.py
+#plotter = plotters.AxiPlotter() # Direct connection to AxiDraw using axi module
+#plotter = plotters.NoPlotter() # Simply draws output
 
 plot.figure('A5')
 plot.stroke_rect(viewport, 'r', linestyle=':')

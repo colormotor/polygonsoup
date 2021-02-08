@@ -85,7 +85,7 @@ proj = perspective(geom.radians(60), rect_aspect(viewport), 0.1)
 # Viewport transformations 3d -> 2d
 Sv = view_3d(S, view, proj, viewport, clip=True) # clip True/False enables/disables viewport clipping
 # Draw
-plotter = plotters.AxiDrawClient('localhost') # Socket connection to axidraw_server.py
+plotter = plotters.AxiDrawClient() # Socket connection to axidraw_server.py
 #plotter = plotters.AxiPlotter() # Direct connection to AxiDraw using axi module
 #plotter = plotters.NoPlotter() # Simply draws output
 

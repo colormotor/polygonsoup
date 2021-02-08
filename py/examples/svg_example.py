@@ -8,7 +8,7 @@ import polygonsoup.plotters as plotters
 import polygonsoup.geom as geom
 import polygonsoup.svg as svg
 
-#plotter = plotters.AxiDrawClient('localhost') # Socket connection to axidraw_server.py
+#plotter = plotters.AxiDrawClient() # Socket connection to axidraw_server.py
 plotter = plotters.AxiPlotter() # Direct connection to AxiDraw using axi module
 #plotter = plotters.NoPlotter() # Simply draws output
 
