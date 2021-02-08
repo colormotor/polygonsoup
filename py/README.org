@@ -97,12 +97,13 @@ This module provides utilities to load SVG files. To load a file as a compound p
 import polygonsoup.svg as svg
 S = svg.load_svg('filename.svg')
 #+end_example
+See [[https://github.com/colormotor/polygonsoup/blob/main/py/examples/svg_example.py][examples/svg_example.py]] for a usage example.
 
 *** ~hatch~
-This module implements hatching, which can be used to "fill" a shape with lines. The input to the method is assumed to be closed, and filling of compound shapes follows the [[https://en.wikipedia.org/wiki/Even–odd_rule]["Even-odd"]] rule.
+This module implements hatching, which can be used to "fill" a shape with lines. The input to the method is assumed to be closed, and filling of compound shapes follows the [[https://en.wikipedia.org/wiki/Even–odd_rule]["Even-odd"]] rule. See [[https://github.com/colormotor/polygonsoup/blob/main/py/examples/cubes_hatch.py][examples/cubes_hatch.py]] for a usage example.
 
 *** ~vtk_utils~
-This module exposes some of the functionalities of the Visualization Toolkit (VTK), a powerful library for 3d geometry processing.
+This module exposes some of the functionalities of the Visualization Toolkit (VTK), a powerful library for 3d geometry processing. See [[https://github.com/colormotor/polygonsoup/blob/main/py/examples/vtk_contour_lines.py][examples/vtk_contour_lines.py]] and [[https://github.com/colormotor/polygonsoup/blob/main/py/examples/vtk_silhouette.py][examples/vtk_silhouette.py]] for usage examples.
 
 *** ~limb~
 The limb module provides utilities to perform forward and inverse kinematics on
