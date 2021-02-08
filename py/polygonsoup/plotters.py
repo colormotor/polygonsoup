@@ -54,7 +54,11 @@ class AxiPlotter:
                 dtext = dtext.translate(*text_pos)
                 d.add(dtext)
 
-            axi.draw(d)
+            try:
+                axi.draw(d)
+            except Exception as e:
+                print(e)
+
         except ModuleNotFoundError as e:
             print(e)
             print('Could not find axi module')
@@ -71,30 +75,38 @@ class AxiDrawClient:
         self.raw = raw
 
     def open(self):
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_address = (self.address, self.port)
-        print('connecting to %s port %s'%server_address)
-        self.sock.connect(server_address)
-        self.socket_open = True
+
+        try:
+            self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            print('connecting to %s port %s'%server_address)
+            self.sock.connect(server_address)
+            self.socket_open = True
+        except ConnectionRefusedError as e:
+            print(e)
+            print('could not connect to: ' + str(server_address))
+            self.sock = None
+            self.socket_open = False
 
     def close(self):
         print('Closing socket')
-        self.sock.close()
-        self.socket_open = False
-        self.paths.clear()
+        if self.sock is not None:
+            self.sock.close()
+            self.socket_open = False
+            self.paths.clear()
 
     def send(self, msg):
         auto_open = False
         if not self.socket_open:
             self.open()
             auto_open = True
-        self.sock.sendall(msg.encode('utf-8'))
-        if auto_open:
-            self.close()
+        if self.socket_open:
+            self.sock.sendall(msg.encode('utf-8'))
+            if auto_open:
+                self.close()
 
     def sendln(self, msg):
         self.send(msg + '\n')
-
 
     def drawing_start(self, title=''):
         self.open()
