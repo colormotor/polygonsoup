@@ -10,7 +10,7 @@ cfg = lambda: None
 cfg.scale = 10000
 
 def ensure_list(v):
-    if not v:
+    if type(v)==list and not v:
         return v
     if not is_compound(v):
         return [v]

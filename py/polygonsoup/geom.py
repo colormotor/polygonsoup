@@ -18,6 +18,18 @@ def is_compound(S):
         return True
     return False
 
+def is_polyline(P):
+    '''A polyline can be represented as either a list of points or a NxDim array'''
+    if (type(P[0]) == np.ndarray and
+        len(P[0].shape) < 2):
+        return True
+    return False
+
+def is_empty(S):
+    if type(S)==list and not S:
+        return True
+    return False
+
 def vec(*args):
     return np.array(args)
 
@@ -328,16 +340,25 @@ def frustum( left, right, bottom, top, near, far ):
 
     return m
 
+def _affine_transform_polyline(mat, P):
+    dim = P[0].size
+    P = np.vstack([np.array(P).T, np.ones(len(P))])
+    P = mat@P
+    return list(P[:dim,:].T)
+
 def affine_transform(mat, data):
-    if type(data)==list:
-        if type(data[0])==list: # Compound shape
-            return [affine_transform(mat, P) for P in data]
-        else: # point list (either a list or ndarray)
-            dim = data[0].size
-            P = np.vstack([np.array(data).T, np.ones(len(data))])
-            P = mat@P
-            return list(P[:dim,:].T)
-    elif type(data) == np.ndarray: # assume we have a point
+    if is_empty(data):
+        print('Empty data to affine_transform!')
+        return data
+    if is_polyline(data):
+        P = data
+        dim = P[0].size
+        P = np.vstack([np.array(P).T, np.ones(len(P))])
+        P = mat@P
+        return list(P[:dim,:].T)
+    elif is_compound(data):
+        return [affine_transform(mat, P) for P in data]
+    else: # assume a point
         dim = len(data)
         p = np.concatenate([data, 1])
         return (mat@p)[:dim]
