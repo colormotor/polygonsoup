@@ -38,7 +38,7 @@ proj = perspective(geom.radians(60), rect_aspect(viewport), 0.1)
 # Viewport transformations 3d -> 2d
 Sv = view_3d(S, view, proj, viewport, clip=True) # clip True/False enables/disables viewport clipping
 
-plot.figure(3, 3)
+plot.figure('A5')
 plot.stroke_rect(viewport, 'r', linestyle=':')
 plot.stroke(Sv, 'k')
 plot.show(title='Cubes + hatch')

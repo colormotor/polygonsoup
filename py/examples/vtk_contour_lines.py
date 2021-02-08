@@ -10,6 +10,8 @@ import polygonsoup.geom as geom
 import polygonsoup.plot as plot
 import polygonsoup.hatch as hatch
 reload(geom); reload(plot); reload(hatch)
+import polygonsoup.plotters as plotters
+reload(plotters)
 from polygonsoup.geom import (vec,
                               make_rect, rect_aspect,
                               shapes,
@@ -21,8 +23,8 @@ reload(clip)
 import polygonsoup.vtk_utils as vtku
 reload(vtku)
 
-model, pos = vtku.load_model('teapot.obj'), vec(0, -0.7, -14.5)
-#model, pos = vtku.load_model('stanford-bunny.obj'), vec(0, -0.08, -0.55)
+#model, pos, name = vtku.load_model('teapot.obj'), vec(0, -0.7, -14.5), 'Teapot'
+model, pos, name = vtku.load_model('stanford-bunny.obj'), vec(0, -0.08, -0.55), 'Bunny'
 contours = vtku.contour_lines(model, [0,1,0], 80)
 
 # Viewport rect
@@ -61,10 +63,14 @@ if clip_contours:
 
     contours_v = clip_sorted(contours_v)
 
-plot.figure(3, 3)
+plotter = plotters.AxiDrawClient('localhost') # Socket connection to axidraw_server.py
+#plotter = plotters.AxiPlotter() # Direct connection to AxiDraw using axi module
+#plotter = plotters.NoPlotter() # Simply draws output
+
+plot.figure('A5', plotter=plotter)
 plot.stroke_rect(viewport, 'r', linestyle=':')
 plot.stroke(contours_v, 'k')
 # Use this to visualize ordering with filled polygons
 # for i, ctr in enumerate(contours_v):
 #     plot.fill_stroke(ctr, np.ones(3)*0.5, 'k', zorder=i)
-plot.show(title='Teapot')
+plot.show(title=name)

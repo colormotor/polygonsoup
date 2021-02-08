@@ -28,6 +28,6 @@ segs = clip.difference(poly, S, False, True)
 S += hatches
 S += [[segs]]
 
-plot.figure(3, 3)
+plot.figure('A4')
 plot.stroke(S, 'k')
 plot.show(title='Boolean operations')

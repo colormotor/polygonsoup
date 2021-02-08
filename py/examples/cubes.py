@@ -34,7 +34,7 @@ proj = geom.parallel(rect_aspect(viewport)) #1, 1)
 # Viewport transformations 3d -> 2d
 Sv = view_3d(S, view, proj, viewport, clip=True) # clip True/False enables/disables viewport clipping
 
-plot.figure(3, 3)
+plot.figure('A4')
 plot.stroke_rect(viewport, 'r', linestyle=':')
 plot.stroke(Sv, 'k')
 plot.show(title='Cubes')

@@ -39,7 +39,7 @@ contours_v = view_3d(contours, view, proj, viewport, clip=True)
 
 clip_contours = True
 
-plot.figure(3, 3)
+plot.figure('A5')
 plot.stroke_rect(viewport, 'r', linestyle=':')
 plot.stroke(contours_v, 'k')
 # Use this to visualize ordering with filled polygons

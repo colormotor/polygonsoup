@@ -11,6 +11,7 @@ import numpy as np
 import polygonsoup.geom as geom
 import polygonsoup.plot as plot
 import polygonsoup.hatch as hatch
+import polygonsoup.plotters as plotters
 reload(geom); reload(plot); reload(hatch)
 from polygonsoup.geom import (vec,
                               make_rect, rect_aspect,
@@ -18,7 +19,6 @@ from polygonsoup.geom import (vec,
                               radians, degrees,
                               trans_3d, rotx_3d, roty_3d, rotz_3d, scaling_3d,
                               affine_transform, perspective, view_3d)
-
 import polygonsoup.limb as limb
 reload(limb)
 
@@ -41,7 +41,7 @@ limb.fk(limb.random_joints())
 S.append(limb.frame_positions())
 
 k_orientation = 0.5
-soft = False
+soft = True
 # reach first point along circle
 q = limb.q
 x = limb.end_effector()
@@ -85,7 +85,11 @@ proj = perspective(geom.radians(60), rect_aspect(viewport), 0.1)
 # Viewport transformations 3d -> 2d
 Sv = view_3d(S, view, proj, viewport, clip=True) # clip True/False enables/disables viewport clipping
 # Draw
-plot.figure(3, 3)
+plotter = plotters.AxiDrawClient('localhost') # Socket connection to axidraw_server.py
+#plotter = plotters.AxiPlotter() # Direct connection to AxiDraw using axi module
+#plotter = plotters.NoPlotter() # Simply draws output
+
+plot.figure('A5', plotter=plotter)
 plot.stroke_rect(viewport, 'r', linestyle=':')
 plot.stroke(Sv, 'k', linewidth=0.5, alpha=0.5)
 if soft:
