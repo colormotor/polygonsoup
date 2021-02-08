@@ -1,0 +1,44 @@
+#+TITLE: AxiDraw TCP/IP client and server
+
+Utility for setting up a TCP/IP connection with the AxiDraw V3 plotter.
+The server code is in Python and is a slightly modified version of [[https://lurkertech.com/axiserver/][this script]] developed by Chris Pirazzi and Paul Haeberli. The code here provides addition options for plotting a title to each plot, and support for command line options.
+
+* Installation requirements
+Requires installing the [[https://github.com/fogleman/axi][Axi]] Python package, by Michael Fogleman, used to control the plotter. Clone the repository and follow instructions to install.
+
+* Running
+To start the server run the python script from the command line
+#+begin_example
+python axidraw_server.py
+#+end_example
+
+The server defaults to port 80, but you can set that with other paramters when running the script
+#+begin_example
+python axidraw_server.py --port=7777
+#+end_example
+
+
+** Page size and subdivision
+By default the server fits the paths sent to it within a default work area of 8 inches square. Use the height of the paper as a reference to set sized. The size of the work area can be varied by using a paramter ~--size~, e.g.
+#+begin_example
+python axidraw_server.py --size=9
+#+end_example
+changes the work area to 9x9 inches.
+
+The page size can also be set with the ~--format~ option, which accepts a string with either ~A5~, ~A4~ or ~A3~, e.g.
+#+begin_example
+python axidraw_server.py --format=A5
+#+end_example
+Will set the size to the height of a portrait-mode A5 page.
+
+The area can be subdivided into a grid, so each new path, or list of paths, is sequentially added to a cell of the grid.
+To change the subdivision use ~--nx~ and ~--ny~, e.g.
+#+begin_example
+python axidraw_server.py --nx=3 --ny=4
+#+end_example
+
+Creates a 3X4 grid
+
+** Clients
+The repository contains two simple clients, one for Python 3 and one for Matlab (probably Octave also but haven't tested it yet). The Python client is part of the [[https://github.com/colormotor/polygonsoup/tree/main/py][polygonsoup]], with usage examples given [[https://github.com/colormotor/polygonsoup/tree/main/py/examples][here]]. The Matlab client is located [[https://github.com/colormotor/polygonsoup/tree/main/matlab][here]] with one example script.
+Refer to [[https://lurkertech.com/axiserver/][the original script documentation]] for instructions on low level usage or examples code for other languages.

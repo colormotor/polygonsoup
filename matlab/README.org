@@ -1,0 +1,24 @@
+#+TITLE: Polygonsoup - Matlab support
+
+Matlab integration relies on the function ~axi~ defined in ~axi.m~.
+The syntax is
+#+begin_example
+axi(command_str, data, port, address)
+#+end_example
+where port is the port number on which the server is running, and address is the server IP address (use ~127.0.0.1~ if the server is running on the same machine).
+Port and address default to ~80~ and ~127.0.0.1~ (localhost) respectively.
+These will be omitted in the next examples.
+
+#+begin_example
+axi('draw', S)
+#+end_example
+Draws a list of paths contained in S, with each path of N defined as a 2xN matrix (note this is transposed with respect to the Python convention).
+Note that the server, will rescale the drawing to fit the specified work area size or subdivision, which is handy if one does not want to worry about the coordinate system in which the drawing is being generated. This can be overridden, by using
+#+begin_example
+axi('draw_raw', S)
+#+end_example
+In which case the coordinates must be specified in inches.
+#+begin_example
+axi('title', 'my title')
+#+end_example
+Draws a title string ("my title") in the bottom left of the work area.
