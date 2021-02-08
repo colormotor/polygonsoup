@@ -24,7 +24,7 @@ args.add_argument('--ny', type=int, default=2,
                  help='''Number of vertical subdivisions for test plots''')
 args.add_argument('--padding', type=float, default=0.2,
                  help='''Padding in inches for subdivided drawing''')
-args.add_argument('--size', type=float, default=8.5,
+args.add_argument('--size', type=float, default=5.8,
                  help='''Reference work area size in inches''')
 args.add_argument('--y_up', type=bool, default=False,
                  help='''If true this indicates that the input drawing has origin in the bottom left''')
