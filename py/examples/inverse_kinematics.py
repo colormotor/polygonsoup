@@ -45,18 +45,15 @@ soft = True
 # reach first point along circle
 q = limb.q
 x = limb.end_effector()
-xh =  [*circle[0], *x[3:]]
-
-for i in range(130):
+xh = [*circle[0], *x[3:]]
+xhs = [x + (xh - x)*t for t in np.linspace(0, 1, 50)]
+for xh in xhs:
     x = limb.end_effector()
-    if geom.distance(x[:3], xh[:3]) < 1e-3:
-        print('reached goal')
-        break
     if soft:
         dq = limb.ik_null(q, x, xh, k_orientation=k_orientation)
     else:
         dq = limb.ik(q, x, xh)
-    q = q + dq*0.05
+    q = q + dq
     limb.fk(q)
     S.append(limb.frame_positions())
 
@@ -85,9 +82,9 @@ proj = perspective(geom.radians(60), rect_aspect(viewport), 0.1)
 # Viewport transformations 3d -> 2d
 Sv = view_3d(S, view, proj, viewport, clip=True) # clip True/False enables/disables viewport clipping
 # Draw
-plotter = plotters.AxiDrawClient() # Socket connection to axidraw_server.py
+#plotter = plotters.AxiDrawClient() # Socket connection to axidraw_server.py
 #plotter = plotters.AxiPlotter() # Direct connection to AxiDraw using axi module
-#plotter = plotters.NoPlotter() # Simply draws output
+plotter = plotters.NoPlotter() # Simply draws output
 
 plot.figure('A5', plotter=plotter)
 plot.stroke_rect(viewport, 'r', linestyle=':')

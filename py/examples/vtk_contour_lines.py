@@ -25,7 +25,7 @@ reload(vtku)
 
 #model, pos, name = vtku.load_model('teapot.obj'), vec(0, -0.7, -14.5), 'Teapot'
 model, pos, name = vtku.load_model('stanford-bunny.obj'), vec(0, -0.08, -0.55), 'Bunny'
-contours = vtku.contour_lines(model, [0,1,0], 80)
+contours = vtku.contour_lines(model, [0,1,0], 120)
 
 # Viewport rect
 viewport = make_rect(0, 0, 400, 400)
