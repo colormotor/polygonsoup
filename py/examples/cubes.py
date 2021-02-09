@@ -6,6 +6,7 @@ from importlib import reload
 import numpy as np
 import polygonsoup.geom as geom
 import polygonsoup.plot as plot
+import polygonsoup.plotters as plotters
 reload(geom); reload(plot)
 from polygonsoup.geom import (vec,
                               make_rect, rect_aspect,
@@ -34,7 +35,11 @@ proj = geom.parallel(rect_aspect(viewport)) #1, 1)
 # Viewport transformations 3d -> 2d
 Sv = view_3d(S, view, proj, viewport, clip=True) # clip True/False enables/disables viewport clipping
 
-plot.figure('A4')
+plotter = plotters.AxiDrawClient() # Socket connection to axidraw_server.py
+#plotter = plotters.AxiPlotter() # Direct connection to AxiDraw using axi module
+#plotter = plotters.NoPlotter() # Simply draws output
+
+plot.figure('A5')
 plot.stroke_rect(viewport, 'r', linestyle=':')
 plot.stroke(Sv, 'k')
 plot.show(title='Cubes')

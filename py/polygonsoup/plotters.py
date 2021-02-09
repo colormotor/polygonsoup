@@ -79,18 +79,20 @@ class AxiDrawClient:
         self.paths = []
         self.bounds = None
         self.raw = raw
-
+        self.print_err = True
     def open(self):
         server_address = (self.address, self.port)
 
         try:
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            print('connecting to %s port %s'%server_address)
+            #print('connecting to %s port %s'%server_address)
             self.sock.connect(server_address)
             self.socket_open = True
         except ConnectionRefusedError as e:
-            print(e)
-            print('could not connect to: ' + str(server_address))
+            if self.print_err:
+                print(e)
+                print('could not connect to: ' + str(server_address))
+                self.print_err = False
             self.sock = None
             self.socket_open = False
 
