@@ -44,13 +44,13 @@ def bezier_at(P, t):
         return (1.0-t)**2*P[0] + 2*(1.0-t)*t*P[1] + t**2*P[2]
 
 def plot_control_polygon(Cp, degree=3, lw=0.5, linecolor=np.ones(3)*0.1):
-    n_bezier = num_bezier(Cp.shape[0], degree)
+    n_bezier = num_bezier(len(Cp), degree)
     for i in range(n_bezier):
         cp = Cp[i*degree:i*degree+degree+1, :]
         if degree==3:
             plt.plot(cp[0:2,0], cp[0:2, 1], ':', color=linecolor, linewidth=lw)
             plt.plot(cp[2:,0], cp[2:,1], ':', color=linecolor, linewidth=lw)
-            plt.plot(cp[:,0], cp[0,1], 'o', color=[0, 0.5, 1.])
+            plt.plot(cp[:,0], cp[:,1], 'o', color=[0, 0.5, 1.], markersize=4)
         else:
             plt.plot(cp[:,0], cp[:,1], ':', color=linecolor, linewidth=lw)
             plt.plot(cp[:,0], cp[:,1], 'o', color=[0, 0.5, 1.])

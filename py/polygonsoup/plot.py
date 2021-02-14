@@ -135,6 +135,10 @@ def fill_rect(rect, clr, alpha=1., zorder=None):
     plt.gca().add_patch(
         patches.Rectangle((x, y), w, h, fill=True, facecolor=clr, alpha=alpha, zorder=zorder))
 
+def fill_circle(pos, radius, clr, alpha=1., zorder=None):
+    plt.gca().add_patch(
+        patches.Circle(pos, radius, fill=True, facecolor=clr, alpha=alpha, zorder=zorder))
+
 def set_axis_limits(box, pad=0, invert=True, ax=None, y_limits_only=False):
     # UNUSED
     if ax is None:
@@ -159,7 +163,7 @@ def show_drawing(drawing, size='A4', title='', padding=0, plotter=plotters.NoPlo
         stroke(P, 'k')
     show(title, padding)
 
-def figure(size="A4", plotter=plotters.NoPlotter()):
+def figure(size="A5", plotter=plotters.NoPlotter()):
     if type(size)==str:
         w, h = paper_sizes[size]
     else:

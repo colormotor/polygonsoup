@@ -40,10 +40,10 @@ proj = perspective(geom.radians(60), rect_aspect(viewport), 0.1)
 Sv = view_3d(S, view, proj, viewport, clip=True) # clip True/False enables/disables viewport clipping
 
 plotter = plotters.AxiDrawClient() # Socket connection to axidraw_server.py
-#plotter = plotters.AxiPlotter() # Direct connection to AxiDraw using axi module
-#plotter = plotters.NoPlotter() # Simply draws output
+#plotter = plotters.AxiPlotter() # <<< Direct connection to AxiDraw using axi module
+# plotter = plotters.NoPlotter() # Simply draws output
 
-plot.figure('A5')
+plot.figure('A5', plotter=plotter) # << pass plotter argument here
 plot.stroke_rect(viewport, 'r', linestyle=':')
 plot.stroke(Sv, 'k')
 plot.show(title='Cubes + hatch')

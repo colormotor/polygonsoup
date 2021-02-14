@@ -225,13 +225,12 @@ def trans_2d( xy):
     return m
 
 def scaling_2d( xy, affine=True ):
+    d = 3 if affine else 2
+
     if is_number(xy):
         xy = [xy, xy]
 
-    d = 3 if affine else 2
-
     m = np.eye(d)
-
     m[0,0] = xy[0]
     m[1,1] = xy[1]
     return m
