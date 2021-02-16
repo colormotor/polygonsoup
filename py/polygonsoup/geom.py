@@ -1,5 +1,6 @@
 #%%
 #!/usr/bin/env python3
+import copy
 import numpy as np
 from numpy import (sin, cos, tan)
 from numpy.linalg import (norm, det, inv)
@@ -24,6 +25,11 @@ def is_polyline(P):
         len(P[0].shape) < 2):
         return True
     return False
+
+def close_path(P):
+    if type(P) == list:
+        return P + [P[0]]
+    return np.vstack([P, P[0]])
 
 def is_empty(S):
     if type(S)==list and not S:
@@ -136,6 +142,25 @@ def random_point_in_rect(box):
     x = np.random.uniform( box[0][0], box[1][0] )
     y = np.random.uniform( box[0][1], box[1][1] )
     return np.array([x, y])
+
+def scale_rect(rect, s, halign=0, valign=0):
+    if is_number(s):
+        s = [s, s]
+    sx, sy = s
+    r = [np.array(rect[0]), np.array(rect[1])]
+    origin = rect_center(rect)
+    if (halign == -1):
+        origin[0] = rect_l(rect)
+    if (halign == 1):
+        origin[0] = rect_r(rect)
+    if (valign == -1):
+        origin[1] = rect_t(rect)
+    if (valign == 1):
+        origin[1] = rect_b(rect)
+    A = trans_2d(origin)@scaling_2d([sx, sy])@trans_2d(-origin)
+
+    return [affine_transform(A, r[0]), affine_transform(A, r[1])]
+
 
 def rect_in_rect(src, dst, padding=0., axis=None):
     ''' Fit src rect into dst rect, preserving aspect ratio of src, with optional padding'''
@@ -359,7 +384,7 @@ def affine_transform(mat, data):
         return [affine_transform(mat, P) for P in data]
     else: # assume a point
         dim = len(data)
-        p = np.concatenate([data, 1])
+        p = np.concatenate([data, [1]])
         return (mat@p)[:dim]
 
 def clip_3d(p, q):
@@ -533,8 +558,8 @@ class shapes:
 
     @staticmethod
     def circle(center, r, subd=80):
-        return [vec(np.cos(th), np.sin(th))*r + center
-            for th in np.linspace(0, np.pi*2, subd)]
+        return close_path([vec(np.cos(th), np.sin(th))*r + center
+            for th in np.linspace(0, np.pi*2, subd)[:-1]])
 
     @staticmethod
     def random_radial_polygon(n, min_r=0.5, max_r=1., center=[0,0]):
@@ -569,3 +594,50 @@ def zup_basis():
         [0, 1, 0, 0],
         [0, 0, 0, 1]]).T
 
+## Computational geometry utilities
+
+def _point_to_np(p):
+    return np.array([float(p.x()),
+                 float(p.y())])
+
+def compute_planar_map(polylines):
+    import skgeom
+    arr = skgeom.arrangement.Arrangement()
+
+    for P in polylines:
+        for a, b in zip(P, P[1:]):
+            try:
+                arr.insert(skgeom.Segment2(skgeom.Point2(*a),
+                                    skgeom.Point2(*b)))
+            except Exception as e:
+                print(e)
+
+    return arr
+
+def planar_map_faces(planar):
+    S = []
+    for face in planar.faces:
+        face = face_vertices(face)
+        if face:
+            S.append(close_path(face))
+    return S
+
+def find_face(planar, p):
+    import skgeom
+    face = planar.find(skgeom.Point2(*p))
+    return face
+
+
+def face_vertices(face):
+    if face.is_unbounded():
+        return []
+    P = []
+    i = face.outer_ccb
+    first = next(i)
+    halfedge = next(i)
+    while first != halfedge:
+        P.append(_point_to_np(halfedge.source().point()))
+        halfedge = next(i)
+    P.append(_point_to_np(halfedge.source().point()))
+
+    return P

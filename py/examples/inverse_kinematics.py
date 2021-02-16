@@ -12,17 +12,16 @@ import polygonsoup.geom as geom
 import polygonsoup.plot as plot
 import polygonsoup.hatch as hatch
 import polygonsoup.plotters as plotters
-reload(geom); reload(plot); reload(hatch)
 from polygonsoup.geom import (vec,
                               make_rect, rect_aspect,
                               shapes,
                               radians, degrees,
                               trans_3d, rotx_3d, roty_3d, rotz_3d, scaling_3d,
                               affine_transform, perspective, view_3d)
-import polygonsoup.limb as limb
-reload(limb)
 
+from polygonsoup.limb import Limb
 
+np.random.seed(10)
 viewport = make_rect(0, 0, 400, 400)
 
 S = []
@@ -36,12 +35,12 @@ circle = S[-1]
 
 # Random initial pose
 #limb = limb.Limb('simple_arm.sdf', 'arm_wrist_roll')
-limb = limb.Limb('./kuka_iwa.urdf', 'lbr_iiwa_link_7')
+limb = Limb('./kuka_iwa.urdf', 'lbr_iiwa_link_7')
 limb.fk(limb.random_joints())
 S.append(limb.frame_positions())
 
 k_orientation = 0.5
-soft = True
+soft = False
 # reach first point along circle
 q = limb.q
 x = limb.end_effector()
@@ -80,15 +79,16 @@ view = (geom.zup_basis() # Robot has Z up
 # Perspective matrix
 proj = perspective(geom.radians(60), rect_aspect(viewport), 0.1)
 # Viewport transformations 3d -> 2d
-Sv = view_3d(S, view, proj, viewport, clip=True) # clip True/False enables/disables viewport clipping
+Sv = view_3d(S, view, proj, viewport, clip=False) # clip True/False enables/disables viewport clipping
 # Draw
 #plotter = plotters.AxiDrawClient() # Socket connection to axidraw_server.py
 #plotter = plotters.AxiPlotter() # Direct connection to AxiDraw using axi module
 plotter = plotters.NoPlotter() # Simply draws output
 
 plot.figure('A5', plotter=plotter)
-plot.stroke_rect(viewport, 'r', linestyle=':')
-plot.stroke(Sv, 'k', linewidth=0.5, alpha=0.5)
+#plot.stroke_rect(viewport, 'r', linestyle=':')
+plot.stroke(Sv[0], 'r', linewidth=0.5, alpha=0.5)
+plot.stroke(Sv[1:], 'k', linewidth=0.5, alpha=0.5)
 if soft:
     title = 'IK null-space'
 else:
