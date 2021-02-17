@@ -471,7 +471,7 @@ def view_3d(polyline, modelview, projection, viewport=[vec(-1,-1), (1,1)], clip=
         segments = []
         Z = []
         for pts in polyline:
-            if not pts:
+            if is_empty(pts):
                 continue
             all = view_3d(pts, modelview, projection, viewport, clip, get_normalized_coords)
             if get_normalized_coords:
