@@ -84,7 +84,7 @@ def point_segment_distance(p, a, b):
 def bounding_box(S, padding=0):
     ''' Axis ligned bounding box of one or more contours (any dimension)
         Returns [min,max] list'''
-    if type(S) != list:
+    if not is_compound(S):
         S = [S]
     if not S:
         return np.array([0, 0]), np.array([0, 0])
