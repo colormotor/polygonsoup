@@ -18,7 +18,7 @@ class NoPlotter:
     def _stroke(self, P):
         pass
 
-    def _plot(self, title='', padding=0):
+    def _plot(self, title='', padding=0, box=None):
         pass
 
 class AxiPlotter:
@@ -35,12 +35,13 @@ class AxiPlotter:
     def _stroke(self, P):
         self.paths.append(P)
 
-    def _plot(self, title='', padding=0):
+    def _plot(self, title='', padding=0, box=None):
         try:
             import axi
-            srcbox = geom.bounding_box(self.paths)
+            if box is None:
+                box = geom.bounding_box(self.paths)
             dstbox = geom.make_rect(0, 0, *self.bounds)
-            mat = geom.rect_in_rect_transform(srcbox, geom.make_rect(0, 0, *self.bounds), padding)
+            mat = geom.rect_in_rect_transform(box, geom.make_rect(0, 0, *self.bounds), padding)
             self.paths = geom.affine_transform(mat, self.paths)
             paths = [[tuple(p) for p in path] for path in self.paths]
             if self.sort and len(paths) > 1:
@@ -68,9 +69,13 @@ class AxiDrawClient:
     def __init__(self, address_or_settings='./client_settings.json', port=80, raw=False): #, blocking=False):
         if '.json' in address_or_settings:
             import json
-            settings = json.loads(open(address_or_settings).read())
-            self.address = settings['address']
-            self.port = settings['port']
+            try:
+                settings = json.loads(open(address_or_settings).read())
+                self.address = settings['address']
+                self.port = settings['port']
+            except FileNotFoundError as e:
+                print(e)
+                self.address = None
         else:
             self.address = address_or_settings
             self.port = port
@@ -80,7 +85,11 @@ class AxiDrawClient:
         self.bounds = None
         self.raw = raw
         self.print_err = True
+
     def open(self):
+        if self.address == None:
+            return
+
         server_address = (self.address, self.port)
 
         try:
@@ -185,11 +194,12 @@ class AxiDrawClient:
     def _stroke(self, P):
         self.paths.append(P)
 
-    def _plot(self, title='', padding=0):
+    def _plot(self, title='', padding=0, box=None):
         if self.raw:
             print('Resizing raw plot')
-            srcbox = geom.bounding_box(self.paths)
-            mat = geom.rect_in_rect_transform(srcbox, geom.make_rect(0, 0, *self.bounds), padding)
+            if box is None:
+                box = geom.bounding_box(self.paths)
+            mat = geom.rect_in_rect_transform(box, geom.make_rect(0, 0, *self.bounds), padding)
             self.paths = geom.affine_transform(mat, self.paths)
         self.draw_paths(self.paths, title, close=True)
 

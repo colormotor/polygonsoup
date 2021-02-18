@@ -176,7 +176,7 @@ def figure(size="A5", plotter=plotters.NoPlotter()):
     plotter._set_bounds(w, h)
     return fig
 
-def show(title='', padding=0, axis=False, ydown=True, file=''):
+def show(title='', padding=0, box=None, axis=False, ydown=True, file='', debug_box=False):
     if title:
         plt.title(title)
 
@@ -191,5 +191,7 @@ def show(title='', padding=0, axis=False, ydown=True, file=''):
     if file:
         plt.savefig(file, transparent=True)
 
-    cfg.plotter._plot(title, padding)
+    if debug_box and box is not None:
+        stroke_rect(box, 'r')
+    cfg.plotter._plot(title, padding, box=box)
     plt.show()
