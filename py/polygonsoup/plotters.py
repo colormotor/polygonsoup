@@ -4,22 +4,22 @@ import numpy as np
 import time
 import polygonsoup.geom as geom
 
-class NoPlotter:
-    '''Default dummy plotter
-      Use AxiDrawClient or AxiPlotter to plot somethign
-    '''
+# class NoPlotter:
+#     '''Default dummy plotter
+#       Use AxiDrawClient or AxiPlotter to plot somethign
+#     '''
 
-    def __init__(self):
-        pass
+#     def __init__(self):
+#         pass
 
-    def _set_bounds(self, w, h):
-        pass
+#     def _set_bounds(self, w, h):
+#         pass
 
-    def _stroke(self, P):
-        pass
+#     def _stroke(self, P):
+#         pass
 
-    def _plot(self, title='', padding=0, box=None):
-        pass
+#     def _plot(self, title='', padding=0, box=None):
+#         pass
 
 class AxiPlotter:
     ''' Direct connection to axi module'''

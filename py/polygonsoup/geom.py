@@ -4,6 +4,7 @@ import copy
 import numpy as np
 from numpy import (sin, cos, tan)
 from numpy.linalg import (norm, det, inv)
+from scipy.interpolate import interp1d
 import numbers
 import pdb
 
@@ -30,6 +31,11 @@ def close_path(P):
     if type(P) == list:
         return P + [P[0]]
     return np.vstack([P, P[0]])
+
+def close(S):
+    if is_compound(S):
+        return [close_path(P) for P in S]
+    return close_path(S)
 
 def is_empty(S):
     if type(S)==list and not S:
@@ -230,7 +236,36 @@ def rect_in_rect_transform(src, dst, padding=0., axis=None):
     M = np.dot(M, scaling_2d(rect_size(fitted)/rect_size(src)))
     M = np.dot(M, trans_2d(-cenp_src))
     return M
-#endf
+
+def rect_grid(rect, nrows, ncols, margin=0, padding=0, flatten=True):
+    rect = pad_rect(rect, margin)
+    w, h = rect_size(rect)
+    x0, y0 = rect[0]
+    rw = w / (ncols) - padding*2
+    rh = h / (nrows) - padding*2
+    xs = np.linspace(0, w, ncols+1)[:-1]
+    ys = np.linspace(0, h, nrows+1)[:-1]
+    rects = []
+    for y in ys:
+        row = []
+        for x in xs:
+            row.append(make_rect(x0+x+padding, y0+y+padding, rw, rh))
+        rects.append(row)
+    if flatten:
+        rects = sum(rects, [])
+    return rects
+
+def fit_shapes_in_grid(shapes, rect, nrows, ncols, margin=0, padding=0):
+    rects = rect_grid(rect, nrows, ncols, margin, padding)
+    fitted = []
+    for i, shape in enumerate(shapes):
+        if i >= len(rects):
+            print('insufficient rows and columns in grid')
+            break
+        A = rect_in_rect_transform(bounding_box(shape), rects[i])
+        shape = affine_transform(A, shape)
+        fitted += shape
+    return fitted
 
 # 2d transformations (affine)
 def rot_2d( theta, affine=True ):
@@ -379,13 +414,17 @@ def affine_transform(mat, data):
         dim = P[0].size
         P = np.vstack([np.array(P).T, np.ones(len(P))])
         P = mat@P
-        return list(P[:dim,:].T)
+        return P[:dim,:].T
     elif is_compound(data):
         return [affine_transform(mat, P) for P in data]
     else: # assume a point
         dim = len(data)
         p = np.concatenate([data, [1]])
         return (mat@p)[:dim]
+
+def affine_mul(mat, data):
+    print('Use affine_transform instead')
+    return affine_transform(mat, data) # For backwards compat
 
 def clip_3d(p, q):
     ''' Liang-Barsky homogeneous line clipping to canonical view volume '''
@@ -465,7 +504,6 @@ def view_3d(polyline, modelview, projection, viewport=[vec(-1,-1), (1,1)], clip=
     Output: projected and possibly clipped 2D polylines
     If clipping is enabled, the number of output polyline is not necessarily the same as the input
     '''
-
 
     if is_compound(polyline):
         segments = []
@@ -595,7 +633,6 @@ def zup_basis():
         [0, 0, 0, 1]]).T
 
 ## Computational geometry utilities
-
 def _point_to_np(p):
     return np.array([float(p.x()),
                  float(p.y())])
@@ -627,7 +664,6 @@ def find_face(planar, p):
     face = planar.find(skgeom.Point2(*p))
     return face
 
-
 def face_vertices(face):
     if face.is_unbounded():
         return []
@@ -641,3 +677,108 @@ def face_vertices(face):
     P.append(_point_to_np(halfedge.source().point()))
 
     return P
+
+def uniform_sample( X, delta_s, closed=0, kind='slinear', data=None ):
+    ''' Uniformly samples a contour at a step dist'''
+    if closed:
+        X = np.vstack([X, X[0]])
+        if data is not None:
+            data = np.vstack([data, data[0]])
+
+    D = np.diff(X[:,:2], axis=0)
+    # chord lengths
+    s = np.sqrt(D[:,0]**2 + D[:,1]**2)
+    # Delete values in input with zero distance (due to a bug in interp1d)
+    I = np.where(s==0)
+    X = np.delete(X, I, axis=0)
+    s = np.delete(s, I)
+    if data is not None:
+        if type(data)==list or data.ndim==1:
+            data = np.delete(data, I)
+        else:
+            data = np.delete(data, I, axis=0)
+
+    u = np.cumsum(np.concatenate([[0.], s]))
+    n = int(np.ceil(np.sum(s) / delta_s))
+    t = np.linspace(u[0], u[-1], n)
+
+    f = interp1d(u, X.T, kind=kind)
+    Y = f(t)
+
+    if data is not None:
+        f = interp1d(u, data.T, kind=kind)
+        data = f(t)
+        if closed:
+            if data.ndim>1:
+                return Y.T[:-1,:], data.T[:-1,:]
+            else:
+                return Y.T[:-1,:], data.T[:-1]
+        else:
+            return Y.T, data.T
+    if closed:
+        return Y[:-1,:].T
+    return Y.T
+
+def cleanup_contour(X, eps=1e-10, get_inds=False):
+    ''' Removes points that are closer then a threshold eps'''
+    D = np.diff(X, axis=0)
+    inds = np.array(range(X.shape[0])).astype(int)
+    # chord lengths
+    s = np.sqrt(D[:,0]**2 + D[:,1]**2)
+    # Delete values in input with zero distance (due to a bug in interp1d)
+    I = np.where(s<eps)[0]
+
+    if len(I):
+        X = np.delete(X, I, axis=0)
+        inds = np.delete(inds, I)
+    if get_inds:
+        return X, inds
+    return X
+
+def chord_lengths( P, closed=0 ):
+    ''' Chord lengths for each segment of a contour '''
+    if closed:
+        P = np.vstack([P, P[0]])
+    D = np.diff(P, axis=0)
+    L = np.sqrt( D[:,0]**2 + D[:,1]**2 )
+    return L
+
+def cum_chord_lengths( P, closed=0 ):
+    ''' Cumulative chord lengths '''
+    if len(P.shape)!=2:
+        return []
+    if P.shape[0] == 1:
+        return np.zeros(1)
+    L = chord_lengths(P, closed)
+    return np.cumsum(np.concatenate([[0.0],L]))
+
+def chord_length( P, closed=0 ):
+    ''' Chord length of a contour '''
+    if len(P.shape)!=2 or P.shape[0] < 2:
+        return 0.
+    L = chord_lengths(P, closed)
+    return np.sum(L)
+
+def polygon_area(P):
+    if len(P.shape) < 2 or P.shape[0] < 3:
+        return 0
+    n = P.shape[0]
+    area = 0.0
+    for i in range(n):
+        p0 = i
+        p1 = (i+1)%n
+        area += P[p0,0] * P[p1,1] - P[p1,0] * P[p0,1]
+    return area * 0.5
+
+if __name__=='__main__':
+    from importlib import reload
+    def test_fit_shapes():
+        import polygonsoup.plut as plut
+        reload(plut)
+        plut.figure()
+        s = [[shapes.random_radial_polygon(7)] for i in range(8)]
+        fitted = fit_shapes_in_grid(s, make_rect(0, 0, 100, 100), 3, 3, 10, 4)
+        plut.stroke(close(fitted))
+        plut.show()
+
+    test_fit_shapes()
