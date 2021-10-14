@@ -1,4 +1,5 @@
 import polygonsoup.geom as geom
+import numpy as np
 from scipy.interpolate import splprep, splev
 
 def curved_skeletal_stroke(prototype, spine_, widths, closed=False, smooth_k=10):

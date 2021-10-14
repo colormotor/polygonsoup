@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from matplotlib.patches import Path, PathPatch
 from matplotlib.colors import ListedColormap
-
+import matplotlib
 import numpy as np
 import matplotlib as mpl
 import polygonsoup.geom as geom
@@ -95,14 +95,14 @@ def stroke(S, clr='k', **kwargs):
         return
     if geom.is_compound(S):
         for P in S:
-            stroke(P, clr, **kwargs)
+            stroke(P, color=clr, **kwargs)
         return
 
     # Send out
     cfg.plotter._stroke(S)
 
     P = np.array(S).T
-    plt.plot(P[0], P[1], clr, **kwargs)
+    plt.plot(P[0], P[1], color=mpl.colors.to_rgb(clr), **kwargs)
 
 def fill(S, clr, **kwargs):
     if not S:
@@ -156,6 +156,10 @@ def fill_rect(rect, clr, **kwargs):
 def fill_circle(pos, radius, clr, **kwargs):
     plt.gca().add_patch(
         patches.Circle(pos, radius, fill=True, facecolor=clr, **kwargs)) #alpha=alpha, zorder=zorder))
+
+def stroke_circle(pos, radius, clr, **kwargs):
+    plt.gca().add_patch(
+        patches.Circle(pos, radius, fill=False, edgecolor=clr, **kwargs)) #alpha=alpha, zorder=zorder))
 
 def draw_markers(P, color, marker='o', **kwargs):
     if type(color) == str:

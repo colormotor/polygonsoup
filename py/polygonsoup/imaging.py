@@ -5,8 +5,10 @@ import pdb
 
 from PIL import Image, ImageDraw, ImageFont
 import cv2
+import numpy as np
 
-
+cfg = lambda: None
+cfg.morpho_kernel_size = 5
 
 def find_contours(im, invert=False, thresh=127):
     #im = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
@@ -16,13 +18,12 @@ def find_contours(im, invert=False, thresh=127):
         else:
             ret, thresh = cv2.threshold(im,thresh,256,0)
     else:
-        print('converting')
         thresh = cv2.convertScaleAbs(im.astype(float))
     #image, contours, hierarchy = cv2.findContours(thresh,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
     contours, hierarchy = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     S = []
     for ctr in contours:
-        S.append(np.vstack([ctr[:,0,0], ctr[:,0,1]]))
+        S.append(np.vstack([ctr[:,0,0], ctr[:,0,1]]).T)
     return S
 
 def distance_transform(edgemap, get_inds=True):
@@ -53,3 +54,40 @@ def distance_transform(edgemap, get_inds=True):
     #     idx[mask] = idx_func(edgemap * mask)
     # r
     return d
+
+def gradients(bmp):
+    dx = cv2.Sobel(bmp, cv2.CV_64F, 1, 0)
+    dy = cv2.Sobel(bmp, cv2.CV_64F, 0, 1)
+    return dx, dy
+
+def normalized_gradients(bmp):
+    dx, dy = gradients(bmp)
+    mag = np.sqrt(dx**2.0 + dy**2.0)
+    mag[mag==0] = 1
+    return dx/mag, dy/mag
+
+def edges(bmp, threshs=[200,255]):
+    return cv2.Canny(bmp, *threshs)
+
+
+# Morphological ops
+
+def kernel(size=None):
+    if size is None:
+        size = cfg.morpho_kernel_size
+    return np.ones((size, size),np.uint8)
+
+def morpho_erode(im, size=None, iterations=1):
+    return cv2.erode(im, kernel(size), iterations=iterations)
+
+def morpho_dilate(im, size=None, iterations=1):
+    return cv2.dilate(im, kernel(size), iterations=iterations)
+
+def morpho_open(im, size=None, iterations=1):
+    return morpho_dilate(morpho_erode(im, size=size, iterations=iterations), size=size, iterations=iterations)
+
+def morpho_close(im, size=None, iterations=1):
+    return morpho_erode(morpho_dilate(im, size=size, iterations=iterations), size=size, iterations=iterations)
+
+def morpho_pass(im, size=None, iterations=1):
+    return im

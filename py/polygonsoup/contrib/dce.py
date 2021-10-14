@@ -6,7 +6,8 @@
 
 # RELEVANCE
 # returns normalized relevance measure of required index
-#
+import numpy as np
+
 def chord_lengths( P, closed=0 ):
     if closed:
         P = np.vstack([P, P[0]])
@@ -136,7 +137,7 @@ def blocked(s, i):
 
     return b
 
-def dce(P, num, maxvalue=0, keep_end=1, closed=False, get_indices=False, keep=[], get_flags=False, perimeter=None):
+def dce(P, maxvalue, num=0, keep_end=1, closed=False, get_indices=False, keep=[], get_flags=False, perimeter=None):
     #EVOLUTION(slist, num,<maxvalue>,<keep_end>,<process_until_convex><show>)
     # discrete curve evolution of slist to n points
     #input: slist, num of vertices in resulting list

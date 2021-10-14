@@ -86,6 +86,88 @@ def point_segment_distance(p, a, b):
     proj = a + u*d
     return np.linalg.norm(proj - p)
 
+def line_intersection_uv( a1, a2, b1, b2, aIsSegment=False, bIsSegment=False):
+    EPS = 0.00001
+    intersection = np.zeros(2)
+    uv = np.zeros(2)
+
+    denom  = (b2[1]-b1[1]) * (a2[0]-a1[0]) - (b2[0]-b1[0]) * (a2[1]-a1[1])
+    numera = (b2[0]-b1[0]) * (a1[1]-b1[1]) - (b2[1]-b1[1]) * (a1[0]-b1[0])
+    numerb = (a2[0]-a1[0]) * (a1[1]-b1[1]) - (a2[1]-a1[1]) * (a1[0]-b1[0])
+
+    if abs(denom) < EPS:
+        return False, intersection, uv
+
+    uv[0] = numera / denom
+    uv[1] = numerb / denom
+
+    intersection[0] = a1[0] + uv[0] * (a2[0] - a1[0])
+    intersection[1] = a1[1] + uv[0] * (a2[1] - a1[1])
+
+    isa = True
+    if aIsSegment and (uv[0]  < 0 or uv[0]  > 1):
+        isa = False
+    isb = True
+    if bIsSegment and (uv[1] < 0 or uv[1]  > 1):
+        isb = False
+
+    res = isa and isb
+    return res, intersection, uv
+
+def line_intersection( a1, a2, b1, b2, aIsSegment=False, bIsSegment=False ):
+    res, intersection, uv = line_intersection_uv(a1,a2,b1,b2,False,False)
+    return res, intersection
+
+def line_segment_intersection( a1, a2, b1, b2 ):
+    res, intersection, uv = line_intersection_uv(a1,a2,b1,b2,False,True)
+    return res, intersection
+
+def segment_line_intersection( a1, a2, b1, b2 ):
+    res, intersection, uv = line_intersection_uv(a1,a2,b1,b2,True,False)
+    return res, intersection
+
+def segment_intersection( a1, a2, b1, b2 ):
+    res, intersection, uv = line_intersection_uv(a1,a2,b1,b2,True,True)
+    return res, intersection
+
+def line_ray_intersection( a1, a2, b1, b2 ):
+    res, intersection, uv = line_intersection_uv(a1,a2,b1,b2,False,False)
+    return res and uv[1] > 0, intersection
+
+def ray_line_intersection( a1, a2, b1, b2 ):
+    res, intersection, uv = line_intersection_uv(a1,a2,b1,b2,False,False)
+    return res and uv[0] > 0, intersection
+
+def ray_intersection( a1, a2, b1, b2 ):
+    res, intersection, uv = line_intersection_uv(a1,a2,b1,b2,False,False)
+    return res and uv[0] > 0 and uv[1] > 0, intersection
+
+def ray_segment_intersection( a1, a2, b1, b2 ):
+    res, intersection, uv = line_intersection_uv(a1,a2,b1,b2,False,True)
+    return res and uv[0] > 0 and uv[1] > 0, intersection
+
+def intersect_lines_lsq(lines, l=0, reg_point=None):
+    ''' Least squares line intersection:
+        http://cal.cs.illinois.edu/~johannes/research/LS_line_intersect.pdf
+        l is a regularization factor, encouraging points toward
+        reg_point, if defined, or the midpoint between the segments defining the lines otherwise
+    '''
+
+    R = np.zeros((2,2))
+    q = np.zeros(2)
+    s = np.zeros(2)
+    for a, b in lines:
+        n = ((b-a) / np.linalg.norm(b-a)).reshape(-1,1)
+        #n = np.array([-d[1], d[0]]).reshape(-1,1)
+        R += (np.eye(2) - n @ n.T)
+        q += (np.eye(2) - n @ n.T) @ a
+        s += (a + b)/2
+    s = s/len(lines)
+    if reg_point is not None:
+        s = reg_point
+    ins = np.dot(np.linalg.pinv(R + np.eye(2)*l), q + l*s)
+    return ins
+
 # Rect utilities
 def bounding_box(S, padding=0):
     ''' Axis ligned bounding box of one or more contours (any dimension)
@@ -255,7 +337,7 @@ def rect_grid(rect, nrows, ncols, margin=0, padding=0, flatten=True):
         rects = sum(rects, [])
     return rects
 
-def fit_shapes_in_grid(shapes, rect, nrows, ncols, margin=0, padding=0):
+def fit_shapes_in_grid(shapes, rect, nrows, ncols, margin=0, padding=0, flatten=True):
     rects = rect_grid(rect, nrows, ncols, margin, padding)
     fitted = []
     for i, shape in enumerate(shapes):
@@ -264,10 +346,21 @@ def fit_shapes_in_grid(shapes, rect, nrows, ncols, margin=0, padding=0):
             break
         A = rect_in_rect_transform(bounding_box(shape), rects[i])
         shape = affine_transform(A, shape)
-        fitted += shape
+        if flatten:
+            fitted += shape
+        else:
+            fitted.append(shape)
     return fitted
 
 # 2d transformations (affine)
+def rotate_vector_2d(v, ang):
+    ''' 2d rotation matrix'''
+    ca = np.cos(ang)
+    sa = np.sin(ang)
+    x, y = v
+    return np.array([x*ca - y*sa,
+                     x*sa + y*ca])
+
 def rot_2d( theta, affine=True ):
     d = 3 if affine else 2
     m = np.eye(d)
@@ -611,6 +704,16 @@ class shapes:
         V[:,1] = np.sin(Theta) * R + center[1]
         return V
 
+    @staticmethod
+    def rectangle(*args):
+        if len(args) == 2:
+            rect = [*args]
+        elif len(args) == 1:
+            rect = args[0]
+        elif len(args) == 4:
+            rect = make_rect(*args)
+        P = np.array(rect_corners(rect))
+        return P
 
 plane_xy = (vec(1,0,0), vec(0,1,0))
 plane_xz = (vec(1,0,0), vec(0,0,1))
@@ -678,7 +781,30 @@ def face_vertices(face):
 
     return P
 
-def uniform_sample( X, delta_s, closed=0, kind='slinear', data=None ):
+def curvature(P, closed=0):
+    ''' Contour curvature'''
+    P = P.T
+    if closed:
+        P = np.c_[P[:,-1], P, P[:,0]]
+
+    D = np.diff(P, axis=1)
+    l = np.sqrt(np.sum(np.abs(D)**2,axis=0))+1e-200 #np.sqrt( D[0,:]**2 + D[1,:]**2 )
+    D[0,:] /= l
+    D[1,:] /= l
+
+    n = D.shape[1] #size(D,2);
+
+    theta = np.array([ angle_between(a, b) for a, b in zip(D.T, D.T[1:]) ])
+
+    K = 2.0*np.sin(theta/2) / (np.sqrt( l[:-1] *l[1:] + 1e-200 ))
+
+    if not closed:
+        K = np.concatenate([[K[0]], K, [K[-1]]])
+
+    return K
+#endf
+
+def uniform_sample( X, delta_s, closed=0, kind='slinear', data=None, inv_density=None, density_weight=0.5 ):
     ''' Uniformly samples a contour at a step dist'''
     if closed:
         X = np.vstack([X, X[0]])
@@ -692,15 +818,40 @@ def uniform_sample( X, delta_s, closed=0, kind='slinear', data=None ):
     I = np.where(s==0)
     X = np.delete(X, I, axis=0)
     s = np.delete(s, I)
+    # if inv_density is not None:
+    #     inv_density = np.delete(inv_density, I)
+
     if data is not None:
         if type(data)==list or data.ndim==1:
             data = np.delete(data, I)
         else:
             data = np.delete(data, I, axis=0)
 
+    #maxs = np.max(s)
+    #s = s/maxs
+    #delta_s = delta_s/maxs #np.max(s)
+
+    # if inv_density is not None:
+    #     inv_density = inv_density[:-1]
+    #     inv_density = inv_density - np.min(inv_density)
+    #     inv_density /= np.max(inv_density)
+    #     density = density #1.0 - inv_density
+    #     s = (1.0 - density_weight)*s + density_weight*density
     u = np.cumsum(np.concatenate([[0.], s]))
+    u = u / u[-1]
     n = int(np.ceil(np.sum(s) / delta_s))
     t = np.linspace(u[0], u[-1], n)
+
+    # if inv_density is not None:
+    #     inv_density = inv_density - np.min(inv_density)
+    #     inv_density /= np.max(inv_density)
+    #     inv_density = np.clip(inv_density, 0.75, 1.0)
+    #     param = np.cumsum(1-inv_density)
+    #     param = param - np.min(param)
+    #     param = param / np.max(param)
+
+    #     u = u*param #(1.0 - density_weight) + param*density_weight
+    #     u = u/u[-1]
 
     f = interp1d(u, X.T, kind=kind)
     Y = f(t)
