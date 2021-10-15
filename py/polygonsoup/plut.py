@@ -167,6 +167,11 @@ def draw_markers(P, color, marker='o', **kwargs):
     else:
         plt.plot(P[:,0], P[:,1], color=color, linestyle='None', marker=marker, **kwargs)
 
+def draw_line(a, b, clr, **kwargs):
+    p = np.vstack([a,b])
+    plt.plot(p[:,0], p[:,1], color=clr, solid_capstyle='round', dash_capstyle='round', **kwargs)
+
+
 def set_axis_limits(box, pad=0, invert=True, ax=None, y_limits_only=False):
     # UNUSED
     if ax is None:
