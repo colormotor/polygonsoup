@@ -95,7 +95,7 @@ def stroke(S, clr='k', **kwargs):
         return
     if geom.is_compound(S):
         for P in S:
-            stroke(P, color=clr, **kwargs)
+            stroke(P, clr=clr, **kwargs)
         return
 
     # Send out
