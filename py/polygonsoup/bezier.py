@@ -1,6 +1,14 @@
-#!/usr/bin/env python3
+'''
+  _   _   _   _   _   _   _   _   _   _   _
+ / \ / \ / \ / \ / \ / \ / \ / \ / \ / \ / \
+( P | O | L | Y | G | O | N | S | O | U | P )
+ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/
 
-''' Bezier curve utils '''
+Plotter-friendly graphics utilities
+© Daniel Berio (@colormotor) 2021 - ...
+
+bezier - Bezier curves
+'''
 
 import numpy as np
 import matplotlib.pyplot as plt

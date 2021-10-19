@@ -1,4 +1,14 @@
-#!/usr/bin/env python3
+'''
+  _   _   _   _   _   _   _   _   _   _   _
+ / \ / \ / \ / \ / \ / \ / \ / \ / \ / \ / \
+( P | O | L | Y | G | O | N | S | O | U | P )
+ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/
+
+Plotter-friendly graphics utilities
+© Daniel Berio (@colormotor) 2021 - ...
+
+algorithms - useful datastructures and algorithms
+'''
 
 import numpy as np
 from collections import defaultdict, namedtuple

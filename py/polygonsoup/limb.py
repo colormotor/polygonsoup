@@ -1,6 +1,15 @@
-#!/usr/bin/env python3
-''' Wrapper around kinpy: https://github.com/neka-nat/kinpy
-with custom IK solutions'''
+'''
+  _   _   _   _   _   _   _   _   _   _   _
+ / \ / \ / \ / \ / \ / \ / \ / \ / \ / \ / \
+( P | O | L | Y | G | O | N | S | O | U | P )
+ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/
+
+Plotter-friendly graphics utilities
+© Daniel Berio (@colormotor) 2021 - ...
+
+limb - Wrapper around kinpy: https://github.com/neka-nat/kinpy
+with custom IK solutions
+'''
 
 import numpy as np
 import kinpy as kp
@@ -16,7 +25,7 @@ def vec_to_transform(x):
 
 def quaternion_log( q ):
     """Implements the logarithmic map, which converts a quaternion to axis-angle
-        representation. Joao Silverio
+        representation. from code by Joao Silverio
      """
     n = np.linalg.norm(q)
     if n > 0.00001:

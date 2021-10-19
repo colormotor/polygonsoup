@@ -1,9 +1,20 @@
-#!/usr/bin/env python
+'''
+  _   _   _   _   _   _   _   _   _   _   _
+ / \ / \ / \ / \ / \ / \ / \ / \ / \ / \ / \
+( P | O | L | Y | G | O | N | S | O | U | P )
+ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/
+
+Plotter-friendly graphics utilities
+© Daniel Berio (@colormotor) 2021 - ...
+
+simplify - Polyline simplification
+'''
+
 import numpy as np
 
 from polygonsoup.contrib.dce import dce
 
-# RDP simplification
+# RDP simplification (adapted from https://github.com/fhirschmann/rdp)
 def pldist(point, start, end):
     """
     Calculates the distance from ``point`` to the line given

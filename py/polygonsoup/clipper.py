@@ -1,6 +1,17 @@
-#!/usr/bin/env python3
-# Wrapper around the pyclipper package https://github.com/greginvm/pyclipper,
-# which wraps this great C++ lib http://www.angusj.com/delphi/clipper.php
+'''
+  _   _   _   _   _   _   _   _   _   _   _
+ / \ / \ / \ / \ / \ / \ / \ / \ / \ / \ / \
+( P | O | L | Y | G | O | N | S | O | U | P )
+ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/
+
+Plotter-friendly graphics utilities
+© Daniel Berio (@colormotor) 2021 - ...
+
+clipper - shape clipping and boolean ops
+Wrapper around the pyclipper package https://github.com/greginvm/pyclipper,
+which wraps this great C++ lib http://www.angusj.com/delphi/clipper.php
+'''
+
 import numpy as np
 import pyclipper as clip
 import pdb

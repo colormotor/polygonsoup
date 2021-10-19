@@ -1,3 +1,15 @@
+'''
+  _   _   _   _   _   _   _   _   _   _   _
+ / \ / \ / \ / \ / \ / \ / \ / \ / \ / \ / \
+( P | O | L | Y | G | O | N | S | O | U | P )
+ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/
+
+Plotter-friendly graphics utilities
+© Daniel Berio (@colormotor) 2021 - ...
+
+hatch - 2d hatching
+'''
+
 import numpy as np
 from collections import namedtuple
 from polygonsoup.geom import (radians,

@@ -1,6 +1,18 @@
-#!/usr/bin/env python3
-import autograff.geom as geom
-import autograff.plut as plut
+'''
+  _   _   _   _   _   _   _   _   _   _   _
+ / \ / \ / \ / \ / \ / \ / \ / \ / \ / \ / \
+( P | O | L | Y | G | O | N | S | O | U | P )
+ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/
+
+Plotter-friendly graphics utilities
+© Daniel Berio (@colormotor) 2021 - ...
+
+imaging - imaging utils
+'''
+
+
+import polygonsoup.geom as geom
+import polygonsoup.plut as plut
 import pdb
 
 from PIL import Image, ImageDraw, ImageFont
@@ -91,3 +103,83 @@ def morpho_close(im, size=None, iterations=1):
 
 def morpho_pass(im, size=None, iterations=1):
     return im
+
+def shape_to_outline(S):
+    s = ImageDraw.Outline()
+    for P in S:
+        s.move(*P[0])
+        for p in P[1:]:
+            s.line(*p)
+        s.close()
+    return s
+
+class ShapeRasterizer:
+    ''' Helper class to rasterize shapes via PIL'''
+    def __init__(self, src_rect, raster_size=512, debug_draw=False):
+        dst_rect = geom.make_rect(0, 0, raster_size, raster_size)
+        self.box = geom.scale_rect(dst_rect, 1)  # 1.2)
+
+        self.mat = geom.rect_in_rect_transform(src_rect, dst_rect)
+        self.inv_mat = np.linalg.inv(self.mat)
+        self.scale = np.sqrt(np.linalg.det(self.mat))
+        self.raster_size = raster_size
+        self.debug_draw = debug_draw
+        self.context = self.create_context()
+
+    def create_context(self, color=0):
+        ''' Create a new image with given size'''
+        im = Image.new("L", (self.raster_size, self.raster_size), (color))
+        draw = ImageDraw.Draw(im)
+        self.context = (im, draw)
+        return im, draw
+
+    def set_context(self, context):
+        if context is not None:
+            self.context = context
+
+    def fill_circle(self, p, r, color=255, context=None):
+        self.set_context(context)
+        im, draw = self.context
+        xy = geom.affine_transform(self.mat, p)
+        r = r * self.scale
+        draw.ellipse([xy[0] - r, xy[1] - r, xy[0] + r, xy[1] + r], fill=color)
+
+    def fill_circles(self, centers, radii, color=255, context=None):
+        self.set_context(context)
+        im, draw = self.context
+        for p, r in zip(centers, radii):
+            self.fill_circle(p, r, color, context)
+
+    def fill_shape(self, S, color=255, context=None):
+        self.set_context(context)
+        im, draw = self.context
+        if type(S) != list:
+            S = [S]
+        S = geom.affine_transform(self.mat, S)
+        draw.shape(shape_to_outline(S), color)
+
+    def fill_polygon(self, P, color=255, context=None):
+        self.set_context(context)
+        im, draw = self.context
+        P = geom.affine_transform(self.mat, P)
+        P = [(float(p[0]), float(p[1])) for p in P]
+        draw.polygon(P, fill=color)  # , outline=color)
+
+    def blit(self, context_src, context=None):
+        self.set_context(context)
+        im, draw = self.context
+        draw.bitmap((0,0), context_src[0], 255)
+
+    def contours(self, context=None):
+        self.set_context(context)
+        im, draw = self.context
+        ctrs = find_contours(np.array(im))
+        if not ctrs:
+            return ctrs
+        ctrs = geom.affine_transform(self.inv_mat, ctrs)
+        return ctrs
+
+    def get_image(self, context=None):
+        self.set_context(context)
+        im, draw = self.context
+        return np.array(im)

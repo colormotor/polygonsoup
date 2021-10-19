@@ -1,8 +1,23 @@
+'''
+  _   _   _   _   _   _   _   _   _   _   _
+ / \ / \ / \ / \ / \ / \ / \ / \ / \ / \ / \
+( P | O | L | Y | G | O | N | S | O | U | P )
+ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/
+
+Plotter-friendly graphics utilities
+© Daniel Berio (@colormotor) 2021 - ...
+
+skeletal_strokes - skeletal stroke implementation(s)
+Warps a "prototype" shape along a spine resulting in a deformed "flesh"
+Hsu (1984) Skeletal Strokes
+'''
+
 import polygonsoup.geom as geom
 import numpy as np
 from scipy.interpolate import splprep, splev
 
 def curved_skeletal_stroke(prototype, spine_, widths, closed=False, smooth_k=10):
+    '''Simplified warping along a spine assumed to be a relatively smooth curve'''
     # Avoid coincident points
     spine, I = geom.cleanup_contour(spine_, get_inds=True)
     widths = np.array(widths)[I]
@@ -23,7 +38,7 @@ def curved_skeletal_stroke(prototype, spine_, widths, closed=False, smooth_k=10)
     prototype = geom.affine_transform( geom.scaling_2d([1.0/w, 1.0/w])@geom.trans_2d(-box[0] - [0, h/2]), prototype )
 
     # warp
-    res = []
+    flesh = []
     for P in prototype:
         t = P[:,0]
         h = P[:,1]
@@ -33,5 +48,5 @@ def curved_skeletal_stroke(prototype, spine_, widths, closed=False, smooth_k=10)
         tangents = np.vstack([dx, dy]) / np.sqrt(dx**2 + dy**2)
         normals = np.vstack([-tangents[1,:], tangents[0,:]])
         Q = centers + normals*h*w
-        res.append(Q.T)
-    return res
+        flesh.append(Q.T)
+    return flesh

@@ -1,5 +1,15 @@
-#!/usr/bin/env python3
-# Utilities to interface with VTK
+'''
+  _   _   _   _   _   _   _   _   _   _   _
+ / \ / \ / \ / \ / \ / \ / \ / \ / \ / \ / \
+( P | O | L | Y | G | O | N | S | O | U | P )
+ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/
+
+Plotter-friendly graphics utilities
+© Daniel Berio (@colormotor) 2021 - ...
+
+vtk_utils - Utilities to interface with the Visualization Toolkit (VTK)
+'''
+
 import numpy as np
 import polygonsoup.geom as geom
 import vtk

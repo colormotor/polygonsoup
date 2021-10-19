@@ -1,5 +1,16 @@
-#%%
-#!/usr/bin/env python3
+'''
+  _   _   _   _   _   _   _   _   _   _   _
+ / \ / \ / \ / \ / \ / \ / \ / \ / \ / \ / \
+( P | O | L | Y | G | O | N | S | O | U | P )
+ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/
+
+Plotter-friendly graphics utilities
+© Daniel Berio (@colormotor) 2021 - ...
+
+geom - Geometry utilities
+'''
+
+
 import copy
 import numpy as np
 from numpy import (sin, cos, tan)
@@ -85,6 +96,20 @@ def point_segment_distance(p, a, b):
 
     proj = a + u*d
     return np.linalg.norm(proj - p)
+
+def project(p, a, b):
+    ''' Project point p on segment a, b'''
+    d = b - a
+    t = np.dot( p - a, d ) / np.dot(d, d)
+    return a + d*t
+
+def perp(x):
+    ''' 2d perpendicular vector'''
+    return np.dot([[0,-1],[1, 0]], x)
+
+def reflect( a, b ):
+    d = np.dot(b,a)
+    return a - b*d*2
 
 def line_intersection_uv( a1, a2, b1, b2, aIsSegment=False, bIsSegment=False):
     EPS = 0.00001
@@ -920,6 +945,212 @@ def polygon_area(P):
         p1 = (i+1)%n
         area += P[p0,0] * P[p1,1] - P[p1,0] * P[p0,1]
     return area * 0.5
+
+def triangle_area( a, b, c ):
+    da = a-b
+    db = c-b
+    return det(np.vstack([da, db]))*0.5
+
+def left_of(p, a, b, eps=1e-10):
+    # Assumes coordinate system with y up so actually will be "right of" if visualizd y down
+    p, a, b = [np.array(v) for v in [p, a, b]]
+    return triangle_area(a, b, p) < eps
+
+def is_point_in_triangle(p, tri, eps=1e-10):
+    L = [left_of(p, tri[i], tri[(i+1)%3], eps) for i in range(3)]
+    return L[0]==L[1] and L[1]==L[2]
+
+def is_point_in_rect(p, rect):
+    ''' return wether a point is in a rect'''
+    l, t = rect[0]
+    r, b = rect[1]
+    w, h = rect[1] - rect[0]
+
+    return ( p[0] >= l and p[1] >= t and
+             p[0] <= r and p[1] <= b )
+
+def is_point_in_poly(p, P):
+    ''' Return true if point in polygon'''
+    c = False
+    n = P.shape[0]
+    j = n-1
+    for i in range(n):
+        if ( ((P[i,1]>p[1]) != (P[j,1]>p[1])) and
+             (p[0] < (P[j,0] - P[i,0])*(p[1] - P[i,1]) / (P[j,1] - P[i,1]) + P[i,0]) ):
+                 c = not c
+        j = i
+    return c
+   
+def is_point_in_shape(p, S):
+    ''' Even odd point in shape'''
+    c = 0
+    for P in S:
+        if is_point_in_poly(p, P):
+            c = c+1
+    return (c%2) == 1
+
+# Circles
+def circular_segment_area( r, h ):
+    return r*r*np.acos((r-h)/r)-(r-h)*np.sqrt(2.0*r*h - h*h)
+
+def circumcircle_radius( pa, pb, pc ):
+    d = distance(pa,pb) * distance(pb,pc) * distance(pc,pa)
+    d /= (2.0 * np.abs(triangle_area(pa, pb, pc)) + 1e-10)
+    return d / 2
+
+# code adapted from http://www.ics.uci.edu/~eppstein/junkyard/circumcenter.html
+def circumcenter(a, b, c, exact=True):
+    def orient2d( pa, pb, pc ):
+        acx = pa[0] - pc[0]
+        bcx = pb[0] - pc[0]
+        acy = pa[1] - pc[1]
+        bcy = pb[1] - pc[1]
+        return acx * bcy - acy * bcx
+
+    # Use coordinates relative to point `a' of the triangle.
+    xba = b[0] - a[0]
+    yba = b[1] - a[1]
+    xca = c[0] - a[0]
+    yca = c[1] - a[1]
+
+    # Squares of lengths of the edges incident to `a'.
+    balength = xba * xba + yba * yba
+    calength = xca * xca + yca * yca
+
+    # Calculate the denominator of the formulae.
+    if exact:
+        # Use orient2d() from http://www.cs.cmu.edu/~quake/robust.html
+        # to ensure a correctly signed (and reasonably accurate) result,
+        # avoiding any possibility of division by zero.
+        denominator = 0.5 / orient2d(b, c, a)
+    else:
+        # Take your chances with floating-point roundoff.
+        denominator = 0.5 / (xba * yca - yba * xca);
+
+    # Calculate offset (from `a') of circumcenter.
+    xcirca = (yca * balength - yba * calength) * denominator
+    ycirca = (xba * calength - xca * balength) * denominator
+
+    return np.array([a[0]+xcirca, a[1]+ycirca])
+
+def orthocenter(a, b, c):
+    pa = project(a, b, c)
+    pb = project(b, a, c)
+    return line_intersection(a, pa, b, pb)[1]
+
+def circumcircle(a, b, c):
+    cr = circumcircle_radius(a, b, c)
+    cp = circumcenter(a, b, c)
+    return cp, cr
+
+def incircle(pa, pb, pc):
+    ''' Incircle of a triangle, returns (center, radius)
+    # https://people.sc.fsu.edu/~jburkardt/py_src/triangle_properties/triangle_incircle.py
+    '''
+    a = np.sqrt ( ( pa[0] - pb[0] ) ** 2 + ( pa[1] - pb[1] ) ** 2 )
+    b = np.sqrt ( ( pb[0] - pc[0] ) ** 2 + ( pb[1] - pc[1] ) ** 2 )
+    c = np.sqrt ( ( pc[0] - pa[0] ) ** 2 + ( pc[1] - pa[1] ) ** 2 )
+
+    perimeter = a + b + c
+    center = np.zeros(2)
+
+    if perimeter == 0.0:
+        center[0] = pa[0]
+        center[1] = pa[1]
+        r = 0.0
+        return r, center
+
+    center[0] = (  \
+          b * pa[0] \
+        + c * pb[0] \
+        + a * pc[0] ) / perimeter
+
+    center[1] = (  \
+          b * pa[1] \
+        + c * pb[1] \
+        + a * pc[1] ) / perimeter
+
+    r = 0.5 * np.sqrt ( \
+          ( - a + b + c ) \
+        * ( + a - b + c ) \
+        * ( + a + b - c ) / perimeter )
+
+    return center, r
+
+def incenter(pa, pb, pc):
+    return incircle(pa, pb, pc)[0]
+
+def circle_overlap(c1, r1, c2, r2):
+    ''' Area based measure [0,1] of circle overlap'''
+    A = circle_intersection_area(c1, r1, c2, r2)
+    amin = min( np.pi * r1**2, np.pi * r2**2 )
+    return A / amin
+
+def circles_intersect(c1, r1, c2, r2, eps=0.):
+    ''' Returns if two circles intersect,
+    returns 2 if circles fully overlap,
+    eps defines a proportional threshold on the circle with largest radius'''
+    tol = 1. + eps
+    if r1 > r2:
+        r1 *= tol
+    else:
+        r2 *= tol
+    d = np.linalg.norm(c2 - c1)
+    ins = d < (r1+r2)
+    if ins:
+        if d <= abs(r1-r2):
+            return 2
+        return 1
+    return 0
+
+def circle_intersection_angle(c1, r1, c2, r2):
+    ''' Returns the intersection angle (in degrees) between two circles,
+        with no intersection, angle is 0
+        with full (containement) angle is 180'''
+    d = np.linalg.norm(c2 - c1)
+    ins = d < (r1+r2)
+    if ins:
+        if d <= abs(r1-r2):
+            return 180.
+        else:
+            return degrees(np.arccos((d**2 - r1**2 - r2**2) / (2.*r1*r2)))
+    else:
+        return 0.
+
+def circle_intersection_area(c1, r1, c2, r2):
+    ''' Returns area of the intersection of two circles'''
+    def A():
+        # From http://mathworld.wolfram.com/Circle-CircleIntersection.html
+        d = np.linalg.norm(c1 - c2)
+        R = r1
+        r = r2
+        if d >= r + R:
+            return 0.
+
+        def fA(R, d):
+            return (R**2 * np.arccos(d/R) - d * np.sqrt(R**2 - d**2))
+
+        d1 = (d**2 - r**2 + R**2) / (d*2)
+        d2 = d - d1
+
+        A = fA(R,d1) + fA(r,d2)
+        return A
+
+    d = np.linalg.norm(c2 - c1)
+    ins = d < (r1+r2)
+    if ins:
+        if d <= abs(r1-r2):
+            return min( np.pi * r1**2, np.pi * r2**2 )
+        return A()
+    return 0.
+
+def circle_union_area(c1, r1, c2, r2):
+    ''' Returns area of the union of two circles'''
+    AiB = circle_intersection_area(c1, r1, c2, r2)
+    A = np.pi * r1**2
+    B = np.pi * r2**2
+    return A + B - AiB
+
 
 if __name__=='__main__':
     from importlib import reload

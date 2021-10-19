@@ -1,9 +1,19 @@
-#!/usr/bin/env python3
-''' SVG loading tool. Requires svgpathtools
+'''
+  _   _   _   _   _   _   _   _   _   _   _
+ / \ / \ / \ / \ / \ / \ / \ / \ / \ / \ / \
+( P | O | L | Y | G | O | N | S | O | U | P )
+ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/
+
+Plotter-friendly graphics utilities
+© Daniel Berio (@colormotor) 2021 - ...
+
+skeletal_strokes - SVG loading
+Requires svgpathtools
 To install possibly use:
  pip install git+https://github.com/mathandy/svgpathtools.git
 Since the pip version does not support rectangles (at this time at least).
 '''
+
 # Naive SVG loader
 from importlib import reload
 import svgpathtools as svg

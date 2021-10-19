@@ -1,4 +1,18 @@
-#!/usr/bin/env python3
+'''
+  _   _   _   _   _   _   _   _   _   _   _
+ / \ / \ / \ / \ / \ / \ / \ / \ / \ / \ / \
+( P | O | L | Y | G | O | N | S | O | U | P )
+ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/
+
+Plotter-friendly graphics utilities
+© Daniel Berio (@colormotor) 2021 - ...
+
+schematize - C-oriented polyline schematization.
+Quick and dirty implementation of angular schematization as in:
+Dwyer et al. (2008) A fast and simple heuristic for metro map path simplification
+https://pdfs.semanticscholar.org/c791/260d13dff6a7fad539ae182e9791c909aa17.pdf
+still can produce some very short segments, must fix.
+'''
 
 import numpy as np
 from polygonsoup.algorithms import DoublyLinkedList

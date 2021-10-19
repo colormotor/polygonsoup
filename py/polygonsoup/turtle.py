@@ -1,6 +1,15 @@
-#!/usr/bin/env python3
-# Adapted from axi
-#
+'''
+  _   _   _   _   _   _   _   _   _   _   _
+ / \ / \ / \ / \ / \ / \ / \ / \ / \ / \ / \
+( P | O | L | Y | G | O | N | S | O | U | P )
+ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/
+
+Plotter-friendly graphics utilities
+© Daniel Berio (@colormotor) 2021 - ...
+
+turtle - 2d turtle implementation (adapted from Fogelman's axi module)
+'''
+
 import numpy as np
 import polygonsoup.geom as geom
 vec = geom.vec

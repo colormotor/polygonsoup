@@ -1,5 +1,15 @@
-#!/usr/bin/env python3
-# Matplotlib wrapper.
+'''
+  _   _   _   _   _   _   _   _   _   _   _
+ / \ / \ / \ / \ / \ / \ / \ / \ / \ / \ / \
+( P | O | L | Y | G | O | N | S | O | U | P )
+ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/
+
+Plotter-friendly graphics utilities
+© Daniel Berio (@colormotor) 2021 - ...
+
+plut - visualization utils (matplotlib-based)
+'''
+
 
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
@@ -136,13 +146,13 @@ def fill_stroke(S, clr, strokeclr, **kwargs):
     plt.gca().add_patch(PathPatch(Path(path, cmds), facecolor=clr, edgecolor=strokeclr, fill=True,  **kwargs))
 
 
-def stroke_rect(rect, clr='k', alpha=1., **kwargs):
+def stroke_rect(rect, clr='k', plot=True, **kwargs):
     x, y = rect[0]
     w, h = rect[1] - rect[0]
 
     # Send out
-    #if plot:
-    cfg.plotter._stroke(geom.rect_corners(rect, close=True))
+    if plot:
+        cfg.plotter._stroke(geom.rect_corners(rect, close=True))
 
     plt.gca().add_patch(
         patches.Rectangle((x, y), w, h, fill=False, edgecolor=clr, **kwargs))
@@ -179,11 +189,40 @@ def set_axis_limits(box, pad=0, invert=True, ax=None, y_limits_only=False):
 
     xlim = [box[0][0]-pad, box[1][0]+pad]
     ylim = [box[0][1]-pad, box[1][1]+pad]
+
     ax.set_ylim(ylim)
     ax.set_ybound(ylim)
+    if not y_limits_only:
+        ax.set_xlim(xlim)
+        ax.set_xbound(xlim)
 
     # Hack to get matplotlib to actually respect limits?
-    stroke_rect([geom.vec(xlim[0], ylim[0]), geom.vec(xlim[1], ylim[1])], 'r', alpha=0, plot=False)
+    stroke_rect([geom.vec(xlim[0], ylim[0]), geom.vec(xlim[1], ylim[1])], 'r', plot=False, alpha=0)
+    # ax.set_clip_on(True)
+    if invert:
+        ax.invert_yaxis()
+
+def set_axis_limits(P, pad=0, invert=True, ax=None, y_limits_only=False):
+    if ax is None:
+        ax = plt.gca()
+
+    if type(P) == tuple or (type(P)==list and len(P)==2):
+        box = P
+        xlim = [box[0][0]-pad, box[1][0]+pad]
+        ylim = [box[0][1]-pad, box[1][1]+pad]
+    else:
+        if type(P) == list:
+            P = np.hstack(P)
+        xlim = [np.min(P[0,:])-pad, np.max(P[0,:])+pad]
+        ylim = [np.min(P[1,:])-pad, np.max(P[1,:])+pad]
+    ax.set_ylim(ylim)
+    ax.set_ybound(ylim)
+    if not y_limits_only:
+        ax.set_xlim(xlim)
+        ax.set_xbound(xlim)
+
+    # Hack to get matplotlib to actually respect limits?
+    stroke_rect([geom.vec(xlim[0],ylim[0]), geom.vec(xlim[1], ylim[1])], 'r', alpha=0)
     # ax.set_clip_on(True)
     if invert:
         ax.invert_yaxis()
@@ -232,7 +271,8 @@ def setup(ydown=True, axis=False, box=None, debug_box=False):
         ax.invert_yaxis()
     if debug_box and box is not None:
         stroke_rect(box, 'r')
-
+    if box is not None:
+        set_axis_limits(box, invert=ydown, ax=ax, y_limits_only=False)
 
 categorical_palettes = {
     'Tabular':[

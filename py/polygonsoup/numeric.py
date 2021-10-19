@@ -1,4 +1,15 @@
-#!/usr/bin/env python3
+'''
+  _   _   _   _   _   _   _   _   _   _   _
+ / \ / \ / \ / \ / \ / \ / \ / \ / \ / \ / \
+( P | O | L | Y | G | O | N | S | O | U | P )
+ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/
+
+Plotter-friendly graphics utilities
+© Daniel Berio (@colormotor) 2021 - ...
+
+numeric - numpy-based utilities
+'''
+
 import numpy as np
 
 def randspace(a, b, n, minstep=0.1, maxstep=0.6):
