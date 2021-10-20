@@ -64,19 +64,19 @@ transforms 3d polylines into 2d ones, given a view and a projection matrix. The
 projection can be either a perspective projection (~geom.perspective~) or
 parallel projection (~geom.parallel~).
 
-*** ~plot~
-The ~plot~ module enables visualisation and plotting of polylines with the same interface.
+*** ~plut~ (or ~plot~)
+The ~plut~ module enables visualisation and plotting of polylines with the same interface.
 Visualisation is done through matplotlib, while plotting is done with different interfaces exposed in the ~plotters~ module. Polylines and compound polylines can be plotted with the ~plot.stroke~ function. A barebones visualisation example of a polyline is the following:
 #+begin_example python
-import polygonsoup.plot as plot
+import polygonsoup.plot as plut
 import numpy as np
-plot.figure('A5') # Create a figure with A5 size
-plot.stroke(np.random.uniform(-5, 5, (2, 10)))
-plot.show()
+plut.figure('A5') # Create a figure with A5 size
+plut.stroke(np.random.uniform(-5, 5, (2, 10)))
+plut.show()
 #+end_example
 This displays a random 2D polyline with 10 points. The code between ~figure~ and ~show~ can contain common ~matplotlib~ calls. These will be displayed in the resulting image, but not on the drawing made by the plotter.
 
-The same module provides a ~plot.show_drawing~ function. This takes an ~axi.Drawing~ as an input and allows to plot and visualise outputs generated with the ~axi~ package. As an example of the use of this function refer to [[https://github.com/colormotor/polygonsoup/blob/main/py/examples/axi_lsystem.py][examples/axi_lsystem.py]]. A similar approach can be used to easily convert (and plot) the other nice examples in ~axi~.
+The same module provides a ~plut.show_drawing~ function. This takes an ~axi.Drawing~ as an input and allows to plot and visualise outputs generated with the ~axi~ package. As an example of the use of this function refer to [[https://github.com/colormotor/polygonsoup/blob/main/py/examples/axi_lsystem.py][examples/axi_lsystem.py]]. A similar approach can be used to easily convert (and plot) the other nice examples in ~axi~.
 
 *** ~plotters~
 This module exposes interfaces that allow plotting with AxiDraw. These can be passed with the ~plotter~ argument to the ~plot.figure~ function, which will also send the polylines following the call to the plotter. The ~AxiPlotter~ class requires an AxiDraw to be connected to the computer, and uses the [[https://github.com/fogleman/axi][axi]] package for communicating with the plotter. The ~AxiDrawClient~ connects to a running instance of the [[https://github.com/colormotor/polygonsoup/tree/main/py/server][axidraw_server]] script. The ~NoPlotter~ class is the default, which is used to display graphics only. This can be useful when testing the output of a script.
