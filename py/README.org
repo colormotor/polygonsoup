@@ -4,7 +4,7 @@ A collection of plotter-friendly utilities.
 
 * Requirements
 The dependencies of this package depend on each module. The basic requirements for all modules are
-[[https://numpy.org/][NumPy]] and [[https://matplotlib.org][Matplotlib]].
+[[https://numpy.org/][NumPy]], [[https://www.scipy.org][SciPy]] and [[https://matplotlib.org][Matplotlib]].
 
 ** Module specific reqirements
 - ~polyhonsoup.svg~ depends on [[https://github.com/mathandy/svgpathtools.git][svgpathtools]]
@@ -20,6 +20,7 @@ The dependencies of this package depend on each module. The basic requirements f
     - ~conda install -c conda-forge vtk~
 - The ~polygonsoup.vtk_utils~ module and the relevant examples depend on VTK.
 - The ~polygonsoup.plotters.AxiPlotter~ class depends on the [[https://github.com/fogleman/axi][axi]] Python package. Follow the instructions at the link to install.
+- The ~polygonsoup.imaging~ module depends on OpenCV.
 
 * Install
 To install locally use
@@ -48,9 +49,13 @@ from polygonsoup.geom import vec
 p = vec(0,0)
 # A polyline (a closed square)
 P = [p, vec(10, 0), vec(10, 10), vec(0, 10), p]
+# or
+P = np.array([p, vec(10, 0), vec(10, 10), vec(0, 10), p])
 # A compound polyline (the square and one diagonal)
 S = [P, [p, vec(10,10)]]
 #+end_example
+Polylines can be specified as either lists of points or numpy arrays. 
+While lists can be handy to concatenate points, the preferred format is numpy arrays with points as rows (e.g. a 10x2 array for 10 points) and many functions in this module will return this format.
 
 **** 3D viewing
 This module also contains a basic line-based 3d graphics
