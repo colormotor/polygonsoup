@@ -15,7 +15,7 @@ import copy
 import numpy as np
 from numpy import (sin, cos, tan)
 from numpy.linalg import (norm, det, inv)
-from scipy.interpolate import interp1d
+from scipy.interpolate import interp1d, splprep, splev
 import numbers
 import pdb
 
@@ -894,6 +894,65 @@ def uniform_sample( X, delta_s, closed=0, kind='slinear', data=None, inv_density
     if closed:
         return Y[:,:-1].T
     return Y.T
+
+def smoothing_spline(n, pts, der=0, ds=0., closed=False, w=None, smooth_k=0, degree=3, alpha=1.):
+    ''' Computes a smoothing B-spline for a sequence of points.
+    Input:
+    n, number of interpolating points
+    pts, sequence of points (dim X m)
+    der, derivative order
+    ds, if non-zero an approximate arc length parameterisation is used with distance ds between points,
+    and the parameter n is ignored.
+    closed, if True spline is periodic
+    w, optional weights
+    smooth_k, smoothing parameter,
+    degree, spline degree,
+    alpha, parameterisation (1, uniform, 0.5 centripetal)
+    '''
+    if closed:
+        pts = np.vstack([pts, pts[0]])
+
+    if w is None:
+        w = np.ones(pts.shape[0])
+
+    dim = pts.shape[1]
+    D = np.diff(pts, axis=0)
+    # chord lengths
+    s = np.sqrt(np.sum([D[:,i]**2 for i in range(dim)], axis=0))
+    I = np.where(s==0)
+    pts = np.delete(pts, I, axis=0)
+    s = np.delete(s, I)
+    w = np.delete(w, I)
+
+    degree = min(degree, pts.shape[0]-1)
+
+    if pts.shape[0] < 2:
+        print('Insufficient points for smoothing spline, returning original')
+        return pts
+
+    if ds != 0:
+        D = np.diff(pts, axis=0)
+        s = np.sqrt(np.sum([D[:,i]**2 for i in range(dim)], axis=0))
+        l = np.sum(s)
+        s = s**(alpha)
+        u = np.cumsum(np.concatenate([[0.], s]))
+        u = u / u[-1]
+
+        spl, u = splprep(pts.T, w=w, u=u, k=degree, per=closed, s=smooth_k)
+        n = max(2, int(l / ds))
+        t = np.linspace(u[0], u[-1], n)
+    else:
+        u = np.linspace(0, 1, pts.shape[0])
+        spl, u = splprep(pts.T, u=u, w=w, k=degree, per=closed, s=smooth_k)
+        t = np.linspace(0, 1, n)
+
+    if type(der)==list:
+        res = []
+        for d in der:
+            res.append(np.vstack(splev(t, spl, der=d)).T)
+        return res
+    res = splev(t, spl, der=der)
+    return np.vstack(res).T
 
 def cleanup_contour(X, eps=1e-10, get_inds=False):
     ''' Removes points that are closer then a threshold eps'''
