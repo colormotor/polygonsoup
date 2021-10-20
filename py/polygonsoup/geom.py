@@ -892,7 +892,7 @@ def uniform_sample( X, delta_s, closed=0, kind='slinear', data=None, inv_density
         else:
             return Y.T, data.T
     if closed:
-        return Y[:-1,:].T
+        return Y[:,:-1].T
     return Y.T
 
 def cleanup_contour(X, eps=1e-10, get_inds=False):
