@@ -116,7 +116,10 @@ def shape_to_outline(S):
 class ShapeRasterizer:
     ''' Helper class to rasterize shapes via PIL'''
     def __init__(self, src_rect, raster_size=512, debug_draw=False):
-        dst_rect = geom.make_rect(0, 0, raster_size, raster_size)
+        if type(raster_size) not in [list, tuple, np.ndarray]:
+            raster_size = (raster_size, raster_size)
+
+        dst_rect = geom.make_rect(0, 0, *raster_size) #raster_size, raster_size)
         self.box = geom.scale_rect(dst_rect, 1)  # 1.2)
 
         self.mat = geom.rect_in_rect_transform(src_rect, dst_rect)
@@ -128,7 +131,7 @@ class ShapeRasterizer:
 
     def create_context(self, color=0):
         ''' Create a new image with given size'''
-        im = Image.new("L", (self.raster_size, self.raster_size), (color))
+        im = Image.new("L", self.raster_size, color)
         draw = ImageDraw.Draw(im)
         self.context = (im, draw)
         return im, draw
