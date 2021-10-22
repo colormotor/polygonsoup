@@ -362,19 +362,27 @@ def rect_grid(rect, nrows, ncols, margin=0, padding=0, flatten=True):
         rects = sum(rects, [])
     return rects
 
-def fit_shapes_in_grid(shapes, rect, nrows, ncols, margin=0, padding=0, flatten=True):
+def fit_shapes_in_grid(shapes, rect, nrows, ncols, margin=0, padding=0, flatten=True, get_matrices=False, offset=0):
     rects = rect_grid(rect, nrows, ncols, margin, padding)
     fitted = []
+    matrices = []
     for i, shape in enumerate(shapes):
+        i = i + offset
         if i >= len(rects):
             print('insufficient rows and columns in grid')
             break
+
         A = rect_in_rect_transform(bounding_box(shape), rects[i])
         shape = affine_transform(A, shape)
+
+        matrices.append(A)
+
         if flatten:
             fitted += shape
         else:
             fitted.append(shape)
+    if get_matrices:
+        return fitted, matrices
     return fitted
 
 # 2d transformations (affine)
