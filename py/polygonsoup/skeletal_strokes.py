@@ -16,7 +16,7 @@ import polygonsoup.geom as geom
 import numpy as np
 from scipy.interpolate import splprep, splev
 
-def curved_skeletal_stroke(prototype, spine_, widths, closed=False, smooth_k=10):
+def curved_skeletal_stroke(prototype, spine_, widths, closed=False, smooth_k=10, degree=3):
     '''Simplified warping along a spine assumed to be a relatively smooth curve'''
     # Avoid coincident points
     spine, I = geom.cleanup_contour(spine_, get_inds=True)
@@ -24,7 +24,7 @@ def curved_skeletal_stroke(prototype, spine_, widths, closed=False, smooth_k=10)
 
     # smoothing spline
     n = spine.shape[0]
-    degree = min(3, n-1)
+    degree = min(degree, n-1)
     # parameterized py (approximate) arc lenth
     u = geom.cum_chord_lengths(spine)
     u = u/u[-1]
