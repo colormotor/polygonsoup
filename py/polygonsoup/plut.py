@@ -99,19 +99,22 @@ def set_theme(style=cfg.default_style, fontsize=6):
 set_theme()
 
 
-def stroke(S, clr='k', **kwargs):
+def stroke(S, clr='k', closed=False, **kwargs):
     if type(S)==list and not S:
         # print('Empty shape')
         return
     if geom.is_compound(S):
         for P in S:
-            stroke(P, clr=clr, **kwargs)
+            stroke(P, clr=clr, closed=closed, **kwargs)
         return
+
 
     # Send out
     cfg.plotter._stroke(S)
 
     P = np.array(S).T
+    if closed:
+        P = np.vstack([P, P[0]])
     plt.plot(P[0], P[1], color=mpl.colors.to_rgb(clr), **kwargs)
 
 def fill(S, clr, **kwargs):
