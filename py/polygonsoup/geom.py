@@ -872,7 +872,7 @@ def uniform_sample( X, delta_s, closed=0, kind='slinear', data=None, inv_density
     #     s = (1.0 - density_weight)*s + density_weight*density
     u = np.cumsum(np.concatenate([[0.], s]))
     u = u / u[-1]
-    n = int(np.ceil(np.sum(s) / delta_s))
+    n = max(2, int(np.ceil(np.sum(s) / delta_s)))
     t = np.linspace(u[0], u[-1], n)
 
     # if inv_density is not None:
