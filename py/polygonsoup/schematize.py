@@ -93,9 +93,15 @@ def schematize(P, C, angle_offset, closed=False, get_edge_inds=False, maxiter=10
     # Orthognonal directions
     dtheta = radians(angle_offset)
     N = []
-    for i in range(C):
-        th = (np.pi / C)*i + dtheta
-        N.append(vec(np.cos(th), np.sin(th)))
+    if type(C) in [list, np.ndarray]:
+        for ang in C:
+            th = geom.radians(ang) + dtheta
+            N.append(vec(np.cos(th), np.sin(th)))
+    else:
+        for i in range(C):
+            th = (np.pi / C)*i + dtheta
+            #print(geom.degrees(th))
+            N.append(vec(np.cos(th), np.sin(th)))
 
     V = {}
     best = {}
