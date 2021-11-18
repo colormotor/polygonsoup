@@ -20,19 +20,19 @@ import numpy as np
 
 
 class perf_timer:
-    def __init__(self, name=''):
-        if name:
+    def __init__(self, name='', verbose=True):
+        if name and verbose:
             print(name)
         self.name = name
-
+        self.verbose = verbose
     def __enter__(self):
         self.t = time.perf_counter()
         return self
 
     def __exit__(self, type, value, traceback):
         self.elapsed = (time.perf_counter() - self.t)*1000
-        if self.name:
-            print('%s: elapsed time %.3f'%(self.name, self.elapsed))
+        if self.name and self.verbose:
+            print('%s: elapsed time %.3f milliseconds'%(self.name, self.elapsed))
 
 
 ### Serialization
