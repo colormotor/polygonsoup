@@ -768,6 +768,19 @@ def zup_basis():
         [0, 0, 0, 1]]).T
 
 ## Computational geometry utilities
+
+def interior_straight_skeletons(S):
+    import skgeom as sg
+    polyholes = get_polygons_with_holes(S)
+    skels = []
+    for P, holes in polyholes:
+
+        poly = sg.PolygonWithHoles(sg.Polygon([sg.Point2(*p) for p in P]),
+                                   [sg.Polygon([sg.Point2(*p) for p in Q]) for Q in holes])
+        skel = sg.skeleton.create_interior_straight_skeleton(poly)
+        skels.append(skel)
+    return skels
+
 def _point_to_np(p):
     return np.array([float(p.x()),
                  float(p.y())])
@@ -1047,13 +1060,21 @@ def is_point_in_poly(p, P):
         j = i
     return c
    
-def is_point_in_shape(p, S):
+def is_point_in_shape(p, S, get_flags=False):
     ''' Even odd point in shape'''
     c = 0
+    flags = []
     for P in S:
         if is_point_in_poly(p, P):
+            flags.append(True)
             c = c+1
-    return (c%2) == 1
+        else:
+            flags.append(False)
+
+    res = (c%2) == 1
+    if get_flags:
+        return res, flags
+    return res
 
 # Circles
 def circular_segment_area( r, h ):
@@ -1249,7 +1270,7 @@ def get_point_in_polygon(P, area=None):
     for i in range(n-3):
         q = (b+1+i)%n
         if is_point_in_triangle(P[q], [P[a], P[v], P[b]]):
-            d = geom.distance(P[q], P[v])
+            d = distance(P[q], P[v])
             if d < dist:
                 dist = d
                 inside.append(q)
@@ -1267,6 +1288,35 @@ def get_holes(S, get_points_and_areas=False):
     if get_points_and_areas:
         return holes, points, areas
     return holes
+
+def get_polygons_with_holes(S):
+    '''Return an array with same size as S with 0 not a hole an 1 a hole
+    Optionally return positions in sub-contours and their areas'''
+    import pdb
+    areas = [polygon_area(P) for P in S]
+    points = [get_point_in_polygon(P, area) for P, area in zip(S, areas)]
+    holes = []
+    points_in_flags = []
+    for i, P in enumerate(S):
+        res, flags = is_point_in_shape(points[i], S, get_flags=True)
+        holes.append(not res)
+        points_in_flags.append(flags)
+
+    n = len(S)
+    polyholes = []
+
+    for i in range(n):
+        if holes[i]:
+            continue
+        P = S[i]
+        pholes = []
+        for j in range(n):
+            if i==j or not holes[j]:
+                continue
+            if points_in_flags[j][i]:
+                pholes.append(S[j])
+        polyholes.append((P, pholes))
+    return polyholes
 
 def get_points_in_holes(S):
     '''Get positions inside the holes of S (if any)'''
