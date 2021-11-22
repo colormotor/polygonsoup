@@ -74,6 +74,33 @@ def distance(a, b):
 def distance_sq(a, b):
     return np.dot(b-a, b-a)
 
+def normc(X):
+    ''' Normalizes columns of X'''
+    l = np.sqrt( X[:,0]**2 + X[:,1]**2 )
+    Y = np.array(X)
+    return Y / np.maximum(l, 1e-9).reshape(-1,1)
+
+
+def normals_2d(P, closed=0, vertex=False):
+    ''' 2d normals (fixme)'''
+    if closed:
+        P = np.vstack([P[-1], P, P[0]])
+
+    D = np.diff(P, axis=0)
+    if vertex and D.shape[0] > 1:
+        T = D[:-1] + D[1:]
+        if not closed:
+            T = np.vstack([T[0], T, T[-1]])
+        N = np.dot([[0,1],[-1, 0]], T.T).T
+    else:
+        T = D
+        N = np.dot([[0,1],[-1, 0]], T.T).T
+        if not closed:
+            N = np.vstack([N, N[-1]])
+        else:
+            N = N[:-1]
+    return normc(N)
+
 def point_line_distance(p, a, b):
     if np.array_equal(a,b):
         return distance(p, a)

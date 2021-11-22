@@ -161,6 +161,17 @@ class ShapeRasterizer:
         S = geom.affine_transform(self.mat, S)
         draw.shape(shape_to_outline(S), color)
 
+    def stroke_shape(self, S, lw=1, color=255, context=None):
+        self.set_context(context)
+        im, draw = self.context
+        if type(S) != list:
+            S = [S]
+        S = geom.affine_transform(self.mat, S)
+        for P in S:
+            for a, b in zip(P, P[1:]):
+                draw.line((tuple(a), tuple(b)), fill=255, width=lw, joint='curve')
+        #draw.shape(shape_to_outline(S), color)
+
     def fill_polygon(self, P, color=255, context=None):
         self.set_context(context)
         im, draw = self.context
