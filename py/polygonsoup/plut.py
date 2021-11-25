@@ -119,11 +119,12 @@ def stroke(S, clr='k', closed=False, **kwargs):
     plt.plot(P[0], P[1], color=mpl.colors.to_rgb(clr), **kwargs)
 
 def fill(S, clr, **kwargs):
+    if not geom.is_compound(S):
+        S = [S]
+
     if not S:
         # print('Empty shape')
         return
-    if not geom.is_compound(S):
-        S = [S]
 
     path = []
     cmds = []
