@@ -10,7 +10,6 @@ Plotter-friendly graphics utilities
 geom - Geometry utilities
 '''
 
-
 import copy
 import numpy as np
 from numpy import (sin, cos, tan)
@@ -74,6 +73,33 @@ def distance(a, b):
 
 def distance_sq(a, b):
     return np.dot(b-a, b-a)
+
+def normc(X):
+    ''' Normalizes columns of X'''
+    l = np.sqrt( X[:,0]**2 + X[:,1]**2 )
+    Y = np.array(X)
+    return Y / np.maximum(l, 1e-9).reshape(-1,1)
+
+
+def normals_2d(P, closed=0, vertex=False):
+    ''' 2d normals (fixme)'''
+    if closed:
+        P = np.vstack([P[-1], P, P[0]])
+
+    D = np.diff(P, axis=0)
+    if vertex and D.shape[0] > 1:
+        T = D[:-1] + D[1:]
+        if not closed:
+            T = np.vstack([T[0], T, T[-1]])
+        N = np.dot([[0,1],[-1, 0]], T.T).T
+    else:
+        T = D
+        N = np.dot([[0,1],[-1, 0]], T.T).T
+        if not closed:
+            N = np.vstack([N, N[-1]])
+        else:
+            N = N[:-1]
+    return normc(N)
 
 def point_line_distance(p, a, b):
     if np.array_equal(a,b):
@@ -769,6 +795,19 @@ def zup_basis():
         [0, 0, 0, 1]]).T
 
 ## Computational geometry utilities
+
+def interior_straight_skeletons(S):
+    import skgeom as sg
+    polyholes = get_polygons_with_holes(S)
+    skels = []
+    for P, holes in polyholes:
+
+        poly = sg.PolygonWithHoles(sg.Polygon([sg.Point2(*p) for p in P]),
+                                   [sg.Polygon([sg.Point2(*p) for p in Q]) for Q in holes])
+        skel = sg.skeleton.create_interior_straight_skeleton(poly)
+        skels.append(skel)
+    return skels
+
 def _point_to_np(p):
     return np.array([float(p.x()),
                  float(p.y())])
@@ -837,7 +876,7 @@ def curvature(P, closed=0):
     return K
 #endf
 
-def uniform_sample( X, delta_s, closed=0, kind='slinear', data=None):
+def uniform_sample( X, delta_s, closed=0, kind='slinear', data=None, inv_density=None, density_weight=0.5 ):
     ''' Uniformly samples a contour at a step dist'''
     if closed:
         X = np.vstack([X, X[0]])
@@ -851,6 +890,8 @@ def uniform_sample( X, delta_s, closed=0, kind='slinear', data=None):
     I = np.where(s==0)
     X = np.delete(X, I, axis=0)
     s = np.delete(s, I)
+    # if inv_density is not None:
+    #     inv_density = np.delete(inv_density, I)
 
     if data is not None:
         if type(data)==list or data.ndim==1:
@@ -858,10 +899,31 @@ def uniform_sample( X, delta_s, closed=0, kind='slinear', data=None):
         else:
             data = np.delete(data, I, axis=0)
 
+    #maxs = np.max(s)
+    #s = s/maxs
+    #delta_s = delta_s/maxs #np.max(s)
+
+    # if inv_density is not None:
+    #     inv_density = inv_density[:-1]
+    #     inv_density = inv_density - np.min(inv_density)
+    #     inv_density /= np.max(inv_density)
+    #     density = density #1.0 - inv_density
+    #     s = (1.0 - density_weight)*s + density_weight*density
     u = np.cumsum(np.concatenate([[0.], s]))
     u = u / u[-1]
-    n = max(2, int(np.ceil(np.sum(s) / delta_s)))
+    n = int(np.ceil(np.sum(s) / delta_s))
     t = np.linspace(u[0], u[-1], n)
+
+    # if inv_density is not None:
+    #     inv_density = inv_density - np.min(inv_density)
+    #     inv_density /= np.max(inv_density)
+    #     inv_density = np.clip(inv_density, 0.75, 1.0)
+    #     param = np.cumsum(1-inv_density)
+    #     param = param - np.min(param)
+    #     param = param / np.max(param)
+
+    #     u = u*param #(1.0 - density_weight) + param*density_weight
+    #     u = u/u[-1]
 
     f = interp1d(u, X.T, kind=kind)
     Y = f(t)
@@ -1025,13 +1087,21 @@ def is_point_in_poly(p, P):
         j = i
     return c
    
-def is_point_in_shape(p, S):
+def is_point_in_shape(p, S, get_flags=False):
     ''' Even odd point in shape'''
     c = 0
+    flags = []
     for P in S:
         if is_point_in_poly(p, P):
+            flags.append(True)
             c = c+1
-    return (c%2) == 1
+        else:
+            flags.append(False)
+
+    res = (c%2) == 1
+    if get_flags:
+        return res, flags
+    return res
 
 # Circles
 def circular_segment_area( r, h ):
@@ -1195,9 +1265,131 @@ def circle_union_area(c1, r1, c2, r2):
     B = np.pi * r2**2
     return A + B - AiB
 
+def select_convex_vertex(P, area=None):
+    ''' Select convex vertex (with arbitrary winding)'''
+    if area is None:
+        area = polygon_area(P)
+    n = len(P)
+    maxh = 0
+    verts = []
+    for v in range(n):
+        a, b = (v-1)%n, (v+1)%n
+        if angle_between(P[v] - P[a], P[b] - P[v])*area > 0:
+            h = point_line_distance(P[v], P[a], P[b])
+            if h > maxh:
+                maxh = h
+                verts.append(v)
+    return verts[-1]
 
+def get_point_in_polygon(P, area=None):
+    ''' Get a point inside polygon P
+        See http://apodeline.free.fr/FAQ/CGAFAQ/CGAFAQ-3.html
+        and O'Rourke'''
+    n = len(P)
+    if area is None:
+        area = polygon_area(P)
+    v = select_convex_vertex(P, area)
+    a, b = (v-1)%n, (v+1)%n
+    inside = []
+    dist = np.inf
+    # Check if no other point is inside the triangle a, v, b
+    # and select closest to v if any present
+    for i in range(n-3):
+        q = (b+1+i)%n
+        if is_point_in_triangle(P[q], [P[a], P[v], P[b]]):
+            d = distance(P[q], P[v])
+            if d < dist:
+                dist = d
+                inside.append(q)
+    if not inside:
+        return (P[a] + P[b])/2
+    # no points inside triangle, select midpoint
+    return (P[inside[-1]] + P[v])/2
+
+def get_holes(S, get_points_and_areas=False):
+    '''Return an array with same size as S with 0 not a hole an 1 a hole
+    Optionally return positions in sub-contours and their areas'''
+    areas = [polygon_area(P) for P in S]
+    points = [get_point_in_polygon(P, area) for P, area in zip(S, areas)]
+    holes = [True if not is_point_in_shape(points[i], S) else False  for i, P in enumerate(S)]
+    if get_points_and_areas:
+        return holes, points, areas
+    return holes
+
+def get_polygons_with_holes(S):
+    '''Return an array with same size as S with 0 not a hole an 1 a hole
+    Optionally return positions in sub-contours and their areas'''
+    import pdb
+    areas = [polygon_area(P) for P in S]
+    points = [get_point_in_polygon(P, area) for P, area in zip(S, areas)]
+    holes = []
+    points_in_flags = []
+    for i, P in enumerate(S):
+        res, flags = is_point_in_shape(points[i], S, get_flags=True)
+        holes.append(not res)
+        points_in_flags.append(flags)
+
+    n = len(S)
+    polyholes = []
+
+    for i in range(n):
+        if holes[i]:
+            continue
+        P = S[i]
+        pholes = []
+        for j in range(n):
+            if i==j or not holes[j]:
+                continue
+            if points_in_flags[j][i]:
+                pholes.append(S[j])
+        polyholes.append((P, pholes))
+    return polyholes
+
+def get_points_in_holes(S):
+    '''Get positions inside the holes of S (if any)'''
+    holes, points, areas = get_holes(S, get_points_and_areas=True)
+    return [points[i] for i, hole in enumerate(holes) if hole]
+
+def fix_shape_winding(S):
+    ''' Fixes shape winding to be consistent:
+    for y-down: cw out, ccw in
+    for y-up: ccw out, cw in'''
+    is_shape = True
+    if type(S) != list:
+        S = [S]
+        is_shape = False
+
+    holes, points, areas = get_holes(S, get_points_and_areas=True)
+    S2 = []
+
+    for i, P in enumerate(S):
+        P = np.array(P)
+        if abs(areas[i]) < 1e-10:
+            print("zero area sub-shape")
+            continue
+        if (areas[i] < 0) != holes[i]:
+            P = P[::-1]
+        S2.append(P)
+
+    if not is_shape:
+        return S2[0]
+    return S2
+
+#%%
 if __name__=='__main__':
     from importlib import reload
+    def test_point_in_polygon():
+        from polygonsoup import plut, geom
+        reload(geom)
+        plut.figure((4,4))
+        P = geom.shapes.random_radial_polygon(10, 0.1, 1)
+        plut.stroke(P, 'k', closed=True)
+        v = geom.select_convex_vertex(P, geom.polygon_area(P))
+        plut.fill_circle(P[v], 0.02, 'r')
+        p = geom.get_point_in_polygon(P)
+        plut.fill_circle(p, 0.02, 'b')
+        plut.show()
+
     def test_fit_shapes():
         import polygonsoup.plut as plut
         reload(plut)
@@ -1207,4 +1399,29 @@ if __name__=='__main__':
         plut.stroke(close(fitted))
         plut.show()
 
-    test_fit_shapes()
+    def test_get_holes():
+        from polygonsoup import plut, geom
+        reload(geom)
+        reload(plut)
+        plut.figure((4,4))
+        P = geom.shapes.random_radial_polygon(10, 0.5, 1)*2
+        Q = geom.shapes.random_radial_polygon(10, 0.5, 1)*0.5
+        R = geom.shapes.random_radial_polygon(10, 0.5, 1, center=[3,0])
+        S = [P, Q, R]
+        S = geom.fix_shape_winding(S)
+        #plut.stroke(S, 'k', closed=True)
+        holes = geom.get_holes(S)
+        for i, P in enumerate(S):
+            print(geom.polygon_area(P))
+            plut.draw_arrow(P[0], P[1], 'r', head_width=0.01)
+            if holes[i]:
+                plut.stroke(P, 'r', closed=True)
+            else:
+                plut.stroke(P, 'k', closed=True)
+        for p in geom.get_points_in_holes(S):
+            plut.fill_circle(p, 0.05, 'r')
+        plut.show()
+
+    #test_fit_shapes()
+    #test_point_in_polygon()
+    test_get_holes()
