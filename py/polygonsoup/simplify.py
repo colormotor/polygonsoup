@@ -95,7 +95,6 @@ def _rdp_iter(M, start_index, last_index, epsilon, dist):
 def dp_simplify(M, eps, get_indices=False, closed=False):
     ''' Ramer-Douglas-Peucker Simplification adapted from https://github.com/fhirschmann/rdp/'''
     dist=pldist
-    M = M.T
     if closed:
         M = np.vstack([M, M[0]])
 
@@ -108,5 +107,5 @@ def dp_simplify(M, eps, get_indices=False, closed=False):
         I = I[:-1]
 
     if get_indices:
-        return M[I].T, I
-    return M[I].T
+        return M[I], I
+    return M[I]
