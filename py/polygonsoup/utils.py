@@ -21,8 +21,8 @@ import numpy as np
 
 class perf_timer:
     def __init__(self, name='', verbose=True):
-        if name and verbose:
-            print(name)
+        #if name and verbose:
+        #    print(name)
         self.name = name
         self.verbose = verbose
     def __enter__(self):
