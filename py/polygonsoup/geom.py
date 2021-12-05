@@ -1291,8 +1291,17 @@ def select_convex_vertex(P, area=None):
 
 def get_point_in_polygon(P, area=None):
     ''' Get a point inside polygon P
+        if P is a tuple (S, i), P=S[i] and test considers multiple shape contours
         See http://apodeline.free.fr/FAQ/CGAFAQ/CGAFAQ-3.html
         and O'Rourke'''
+    if type(P) == tuple:
+        # With a tuple assume we are indexing a shape
+        S, ind = P
+        P = S[ind]
+        test_shape = True
+    else:
+        S = []
+
     n = len(P)
     if area is None:
         area = polygon_area(P)
@@ -1308,22 +1317,34 @@ def get_point_in_polygon(P, area=None):
             d = distance(P[q], P[v])
             if d < dist:
                 dist = d
-                inside.append(q)
+                inside.append(P[q])
+    if S: # With a compound shape we need to also test the other vertices
+        for si, Q in enumerate(S):
+            if si==ind:
+                continue
+            n = len(Q)
+            for i in range(n):
+                if is_point_in_triangle(Q[i], [P[a], P[v], P[b]]):
+                    d = distance(P[q], P[v])
+                    if d < dist:
+                        dist = d
+                        inside.append(Q[i])
     if not inside:
         return (P[a] + P[v] + P[b])/3
     # no points inside triangle, select midpoint
-    return (P[inside[-1]] + P[v])/2
+    return (inside[-1] + P[v])/2
 
 
 def get_holes(S, get_points_and_areas=False):
     '''Return an array with same size as S with 0 not a hole an 1 a hole
     Optionally return positions in sub-contours and their areas'''
     areas = [polygon_area(P) for P in S]
-    points = [get_point_in_polygon(P, area) for P, area in zip(S, areas)]
+    points = [get_point_in_polygon((S, i), area) for i, area in enumerate(areas)]
     holes = [True if not is_point_in_shape(points[i], S) else False  for i, P in enumerate(S)]
     if get_points_and_areas:
         return holes, points, areas
     return holes
+
 
 def get_points_in_holes(S):
     '''Get positions inside the holes of S (if any)'''
