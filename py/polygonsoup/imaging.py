@@ -118,9 +118,13 @@ class ShapeRasterizer:
     def __init__(self, src_rect, raster_size=512, debug_draw=False):
         if type(raster_size) not in [list, tuple, np.ndarray]:
             raster_size = (raster_size, raster_size)
+        elif type(raster_size)==np.ndarray:
+            raster_size = raster_size.shape
 
         dst_rect = geom.make_rect(0, 0, *raster_size) #raster_size, raster_size)
-        self.box = geom.scale_rect(dst_rect, 1)  # 1.2)
+        if src_rect is None:
+            src_rect = dst_rect
+        self.box = dst_rect #geom.scale_rect(dst_rect, 1)  # 1.2)
 
         self.mat = geom.rect_in_rect_transform(src_rect, dst_rect)
         self.inv_mat = np.linalg.inv(self.mat)

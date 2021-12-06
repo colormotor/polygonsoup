@@ -157,6 +157,25 @@ class FileWatcher(object):
         return False
 
 
+def process_exists(proc_name):
+    ''' Returns True if process with proc_name exists
+    from https://stackoverflow.com/questions/38056/how-to-check-if-a-process-is-still-running-using-python-on-linux'''
+    import subprocess, re
+
+    ps = subprocess.Popen("ps ax -o pid= -o args= ", shell=True, stdout=subprocess.PIPE)
+    ps_pid = ps.pid
+    output = ps.stdout.read().decode('utf8')
+    ps.stdout.close()
+    ps.wait()
+
+    for line in output.split("\n"):
+        res = re.findall("(\d+) (.*)", line)
+        if res:
+            pid = int(res[0][0])
+            if proc_name in res[0][1] and pid != os.getpid() and pid != ps_pid:
+                return True
+    return False
+
 def print_same_line(s):
     sys.stdout.write("\r" + str(s))
 
