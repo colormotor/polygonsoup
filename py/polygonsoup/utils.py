@@ -168,6 +168,7 @@ def process_exists(proc_name):
     ps.stdout.close()
     ps.wait()
 
+
     for line in output.split("\n"):
         res = re.findall("(\d+) (.*)", line)
         if res:
