@@ -14,7 +14,7 @@ import socket, sys
 import numpy as np
 import time
 import polygonsoup.geom as geom
-
+from polygonsoup.plut import NoPlotter
 # class NoPlotter:
 #     '''Default dummy plotter
 #       Use AxiDrawClient or AxiPlotter to plot somethign
@@ -77,7 +77,7 @@ class AxiPlotter:
 
 class AxiDrawClient:
     ''' Plots to a remote instance of axidraw_server.py'''
-    def __init__(self, address_or_settings='./client_settings.json', port=80, raw=False): #, blocking=False):
+    def __init__(self, address_or_settings='./client_settings.json', port=83, raw=False): #, blocking=False):
         if '.json' in address_or_settings:
             import json
             try:

@@ -22,26 +22,41 @@ import polygonsoup.vtk_utils as vtku
 
 #model, pos, name = vtku.load_model('teapot.obj'), vec(0, -0.7, -14.5), 'Teapot'
 model, pos, name = vtku.load_model('stanford-bunny.obj'), vec(0, -0.08, -0.55), 'Bunny'
-contours = vtku.contour_lines(model, [0,1,0], 120)
+contours = vtku.contour_lines(model, [0,1,0], 60)
 
 # Viewport rect
 viewport = make_rect(0, 0, 400, 400)
-np.random.seed(950)
+np.random.seed(1950)
 # Camera transformation
 view = (trans_3d(pos) @
         rotx_3d(0.6) @
-        roty_3d(np.random.uniform(-1,1)*0.7))
+        roty_3d(np.random.uniform(-1,1)*1.0))
 # Perspective matrix
 proj = perspective(geom.radians(30), rect_aspect(viewport), 0.1)
 # Viewport transformations 3d -> 2d
 contours_v = view_3d(contours, view, proj, viewport, clip=True)
 
+# def join_bruteforce(S):
+#     G = nx.Graph()
+#     visited = set()
+#     for i, P in enumerate(S):
+#         visited.add(i)
+#         res.append(P)
+#         dists = []
+#         for j, Q in enumerate(S):
+#             if j in visited:
+#                 continue
+#             p0, p1 = Q[0], Q[-1]
+
+        
 clip_contours = True
 if clip_contours:
     # Hacky clipping procedure
     # It assumes contour lines are generated for Y axis, and a viewing angle from the top
     centroids = [np.mean(z, axis=0) for z in contours]
     order = [c[1] for c in centroids]
+
+    #order = [np.mean(np.array(z)[:,2]) for z in contours][::-1]
     I = np.argsort(order)
     contours_v = [contours_v[i] for i in I]
 
@@ -56,14 +71,20 @@ if clip_contours:
 
     contours_v = clip_sorted(contours_v)
 
-plotter = plotters.AxiDrawClient() # Socket connection to axidraw_server.py
-#plotter = plotters.AxiPlotter() # Direct connection to AxiDraw using axi module
-#plotter = plotters.NoPlotter() # Simply draws output
 
-plot.figure('A5', plotter=plotter)
-plot.stroke_rect(viewport, 'r', linestyle=':')
-plot.stroke(contours_v, 'k')
+#def join_bruteforce(ctrs):
+
+#contours_v = [geom.smoothing_spline(0, np.array(P), ds=2, smooth_k=0) for P in contours_v]
+#plotter = plotters.AxiDrawClient(port=80) # Socket connection to axidraw_server.py
+#plotter = plotters.AxiPlotter() # Direct connection to AxiDraw using axi module
+plotter = plotters.NoPlotter() # Simply draws output
+
+plot.figure('A3', plotter=plotter)
+#plot.stroke_rect(viewport, 'r', linestyle=':')
+#plot.stroke(contours_v, 'k')
+for i, ctr in enumerate(contours_v):
+    plot.stroke(ctr, plot.default_color(i))
 # Use this to visualize ordering with filled polygons
 # for i, ctr in enumerate(contours_v):
 #     plot.fill_stroke(ctr, np.ones(3)*0.5, 'k', zorder=i)
-plot.show() #title=name)
+plot.show(axis=True) #title=name)

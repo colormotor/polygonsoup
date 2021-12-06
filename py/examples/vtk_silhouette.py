@@ -40,9 +40,9 @@ contours_v = view_3d(contours, view, proj, viewport, clip=True)
 
 clip_contours = True
 
-plotter = plotters.AxiDrawClient() # Socket connection to axidraw_server.py
+# plotter = plotters.AxiDrawClient() # Socket connection to axidraw_server.py
 #plotter = plotters.AxiPlotter() # Direct connection to AxiDraw using axi module
-#plotter = plotters.NoPlotter() # Simply draws output
+plotter = plotters.NoPlotter() # Simply draws output
 
 plot.figure('A5', plotter=plotter)
 plot.stroke_rect(viewport, 'r', linestyle=':')

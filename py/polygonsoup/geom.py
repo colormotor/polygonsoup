@@ -1001,8 +1001,10 @@ def smoothing_spline(n, pts, der=0, ds=0., closed=False, w=None, smooth_k=0, deg
     res = splev(t, spl, der=der)
     return np.vstack(res).T
 
-def cleanup_contour(X, eps=1e-10, get_inds=False):
+def cleanup_contour(X, closed=False, eps=1e-10, get_inds=False):
     ''' Removes points that are closer then a threshold eps'''
+    if closed:
+        X = np.vstack([X, X[0]])
     D = np.diff(X, axis=0)
     inds = np.array(range(X.shape[0])).astype(int)
     # chord lengths
@@ -1010,12 +1012,15 @@ def cleanup_contour(X, eps=1e-10, get_inds=False):
     # Delete values in input with zero distance (due to a bug in interp1d)
     I = np.where(s<eps)[0]
 
+    if closed:
+        X = X[:-1]
     if len(I):
         X = np.delete(X, I, axis=0)
         inds = np.delete(inds, I)
     if get_inds:
         return X, inds
     return X
+
 
 def chord_lengths( P, closed=0 ):
     ''' Chord lengths for each segment of a contour '''
@@ -1024,6 +1029,7 @@ def chord_lengths( P, closed=0 ):
     D = np.diff(P, axis=0)
     L = np.sqrt( D[:,0]**2 + D[:,1]**2 )
     return L
+
 
 def cum_chord_lengths( P, closed=0 ):
     ''' Cumulative chord lengths '''
@@ -1316,6 +1322,94 @@ def get_holes(S, get_points_and_areas=False):
         return holes, points, areas
     return holes
 
+
+def select_convex_vertex(P, area=None):
+    ''' Select convex vertex (with arbitrary winding)'''
+    if area is None:
+        area = polygon_area(P)
+    n = len(P)
+    maxh = 0
+    verts = []
+    for v in range(n):
+        a, b = (v-1)%n, (v+1)%n
+        if angle_between(P[v] - P[a], P[b] - P[v])*area > 0:
+            h = point_line_distance(P[v], P[a], P[b])
+            if h > maxh:
+                maxh = h
+                verts.append(v)
+    return verts[-1]
+
+
+def get_point_in_polygon(P, area=None):
+    ''' Get a point inside polygon P
+        See http://apodeline.free.fr/FAQ/CGAFAQ/CGAFAQ-3.html
+        and O'Rourke'''
+    n = len(P)
+    if area is None:
+        area = polygon_area(P)
+    v = select_convex_vertex(P, area)
+    a, b = (v-1)%n, (v+1)%n
+    inside = []
+    dist = np.inf
+    # Check if no other point is inside the triangle a, v, b
+    # and select closest to v if any present
+    for i in range(n-3):
+        q = (b+1+i)%n
+        if is_point_in_triangle(P[q], [P[a], P[v], P[b]]):
+            d = distance(P[q], P[v])
+            if d < dist:
+                dist = d
+                inside.append(q)
+    if not inside:
+        return (P[a] + P[b])/2
+    # no points inside triangle, select midpoint
+    return (P[inside[-1]] + P[v])/2
+
+
+def get_holes(S, get_points_and_areas=False):
+    '''Return an array with same size as S with 0 not a hole an 1 a hole
+    Optionally return positions in sub-contours and their areas'''
+    areas = [polygon_area(P) for P in S]
+    points = [get_point_in_polygon((S, i), area) for i, area in enumerate(areas)]
+    holes = [True if not is_point_in_shape(points[i], S) else False  for i, P in enumerate(S)]
+    if get_points_and_areas:
+        return holes, points, areas
+    return holes
+
+def get_points_in_holes(S):
+    '''Get positions inside the holes of S (if any)'''
+    holes, points, areas = get_holes(S, get_points_and_areas=True)
+    return [points[i] for i, hole in enumerate(holes) if hole]
+
+def fix_shape_winding(S):
+    ''' Fixes shape winding to be consistent:
+    for y-down: cw out, ccw in
+    for y-up: ccw out, cw in'''
+    is_shape = True
+    if type(S) != list:
+        S = [S]
+        is_shape = False
+    # Make sure that contours don't have repeated end-points because that would break
+    # subsequent computations
+    S = [geom.cleanup_contour(P, closed=True) for P in S]
+    # Identify holes
+
+    holes, points, areas = get_holes(S, get_points_and_areas=True)
+    S2 = []
+
+    for i, P in enumerate(S):
+        P = np.array(P)
+        if abs(areas[i]) < 1e-10:
+            print("zero area sub-shape")
+            continue
+        if (areas[i] < 0) != holes[i]:
+            P = P[::-1]
+        S2.append(P)
+
+    if not is_shape:
+        return S2[0]
+    return S2
+
 def get_polygons_with_holes(S):
     '''Return an array with same size as S with 0 not a hole an 1 a hole
     Optionally return positions in sub-contours and their areas'''
@@ -1344,36 +1438,6 @@ def get_polygons_with_holes(S):
                 pholes.append(S[j])
         polyholes.append((P, pholes))
     return polyholes
-
-def get_points_in_holes(S):
-    '''Get positions inside the holes of S (if any)'''
-    holes, points, areas = get_holes(S, get_points_and_areas=True)
-    return [points[i] for i, hole in enumerate(holes) if hole]
-
-def fix_shape_winding(S):
-    ''' Fixes shape winding to be consistent:
-    for y-down: cw out, ccw in
-    for y-up: ccw out, cw in'''
-    is_shape = True
-    if type(S) != list:
-        S = [S]
-        is_shape = False
-
-    holes, points, areas = get_holes(S, get_points_and_areas=True)
-    S2 = []
-
-    for i, P in enumerate(S):
-        P = np.array(P)
-        if abs(areas[i]) < 1e-10:
-            print("zero area sub-shape")
-            continue
-        if (areas[i] < 0) != holes[i]:
-            P = P[::-1]
-        S2.append(P)
-
-    if not is_shape:
-        return S2[0]
-    return S2
 
 #%%
 if __name__=='__main__':
