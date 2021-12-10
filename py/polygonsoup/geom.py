@@ -1001,7 +1001,7 @@ def smoothing_spline(n, pts, der=0, ds=0., closed=False, w=None, smooth_k=0, deg
     res = splev(t, spl, der=der)
     return np.vstack(res).T
 
-def cleanup_contour(X, closed=False, eps=1e-10, get_inds=False):
+def cleanup_contour(X, eps=1e-10, closed=False, get_inds=False):
     ''' Removes points that are closer then a threshold eps'''
     if closed:
         X = np.vstack([X, X[0]])
