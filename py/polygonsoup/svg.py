@@ -7,7 +7,7 @@
 Plotter-friendly graphics utilities
 © Daniel Berio (@colormotor) 2021 - ...
 
-skeletal_strokes - SVG loading
+SVG loading
 Requires svgpathtools
 To install possibly use:
  pip install git+https://github.com/mathandy/svgpathtools.git

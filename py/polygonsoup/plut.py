@@ -110,19 +110,23 @@ def stroke(S, clr='k', closed=False, **kwargs):
 
 
     # Send out
-    cfg.plotter._stroke(S)
+    P = [p for p in S]
+    if closed:
+        P = P + [P[0]]
 
     P = np.array(S).T
     if closed:
         P = np.vstack([P, P[0]])
+
     plt.plot(P[0], P[1], color=mpl.colors.to_rgb(clr), **kwargs)
 
 def fill(S, clr, **kwargs):
+    if not geom.is_compound(S):
+        S = [S]
+
     if not S:
         # print('Empty shape')
         return
-    if not geom.is_compound(S):
-        S = [S]
 
     path = []
     cmds = []
@@ -184,6 +188,32 @@ def draw_line(a, b, clr, **kwargs):
     p = np.vstack([a,b])
     plt.plot(p[:,0], p[:,1], color=clr, solid_capstyle='round', dash_capstyle='round', **kwargs)
 
+def det22(mat):
+    return mat[0,0] * mat[1,1] - mat[0,1]*mat[1,0]
+
+def draw_arrow(a, b, clr, alpha=1., head_width=0.5, head_length=None, overhang=0.3, zorder=None, **kwargs):
+    if head_length is None:
+        head_length = head_width
+
+    linewidth = 1.0
+    if 'lw' in kwargs:
+        linewidth = kwargs['lw']
+    if 'linewidth' in kwargs:
+        linewidth = kwargs['linewidth']
+
+    # Uglyness, still does not work
+    axis = plt.gca()
+    trans = axis.transData.inverted()
+    scale = np.sqrt(det22(trans.get_matrix()))*axis.figure.dpi*100
+    head_width = (linewidth*head_width)*scale
+    head_length = (linewidth*head_length)*scale
+    a, b  = np.array(a), np.array(b)
+    d = b - a
+
+    draw_line(a, b - geom.normalize(d)*head_length*0.5, clr, linewidth=linewidth)
+    plt.arrow(a[0], a[1], d[0], d[1], lw=0.5, overhang=overhang,
+              head_width=head_width, head_length=head_length, length_includes_head=True,
+              fc=clr, ec='none', zorder=zorder)
 
 def set_axis_limits(box, pad=0, invert=True, ax=None, y_limits_only=False):
     # UNUSED
