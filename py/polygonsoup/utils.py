@@ -50,9 +50,9 @@ def load_pkl(data_path):
     return raw_data
 
 
-def save_pkl(X, data_path):
+def save_pkl(X, data_path, protocol=4):
     with open(os.path.expanduser(data_path), "wb") as f:
-        pickle.dump(X, f, protocol=2)
+        pickle.dump(X, f, protocol=protocol)
 
 
 def load_json(path):
@@ -173,7 +173,9 @@ def process_exists(proc_name):
         res = re.findall("(\d+) (.*)", line)
         if res:
             pid = int(res[0][0])
-            if proc_name in res[0][1] and pid != os.getpid() and pid != ps_pid:
+            if (proc_name in res[0][1] and
+                proc_name + '/' not in res[0][1] and # HACK In case a directory exists with same name
+                pid != os.getpid() and pid != ps_pid):
                 return True
     return False
 
