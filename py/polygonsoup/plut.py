@@ -179,6 +179,7 @@ def stroke_circle(pos, radius, clr, **kwargs):
         patches.Circle(pos, radius, fill=False, edgecolor=clr, **kwargs)) #alpha=alpha, zorder=zorder))
 
 def draw_markers(P, color, marker='o', **kwargs):
+    P = np.array(P)
     if type(color) == str:
         plt.plot(P[:,0], P[:,1], color, linestyle='None', marker=marker, **kwargs)
     else:

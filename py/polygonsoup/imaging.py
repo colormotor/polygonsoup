@@ -113,6 +113,47 @@ def shape_to_outline(S):
         s.close()
     return s
 
+# Gabor filter edge detection, approximately as described in
+# Tresset and Leymarie, 2013, Portrait drawing by Paul the robot
+def build_gabor_filters(n, sigma=2.5, gamma=0.5, lambd=5, ksize=9):
+    filters = []
+    # cv2.getGaborKernel(ksize, sigma, theta, lambda, gamma, psi, ktype)
+    for theta in np.linspace(0, np.pi, n+1)[:-1]: #np.arange(0, np.pi, np.pi / 8):
+        #for lamda in np.arange(0, np.pi, np.pi/4):
+
+        kern = cv2.getGaborKernel((ksize, ksize), sigma, theta, lambd, gamma, 0, ktype=cv2.CV_32F)
+        kern /= 1.5*kern.sum()
+        filters.append(kern)
+    return filters
+
+def gabor(img, filters):
+    accum = np.zeros_like(img)
+    for kern in filters:
+        fimg = cv2.filter2D(img, cv2.CV_32F, kern)
+        np.maximum(accum, fimg, accum)
+    return accum
+
+def multiscale_gabor(img, nscales, thresh, sigma=2.5):
+    import skimage.transform as transform
+    cur = np.array(img)
+    res = np.zeros_like(img)
+    levels = []
+    for i in range(nscales):
+        n = 8
+        if i > 0:
+            n = 8
+        filters = build_gabor_filters(n, sigma)
+        if cur.shape[0] < 9 or cur.shape[1] < 9:
+            break
+        gimg = gabor(cur, filters)
+        gimg = transform.resize(gimg, img.shape, anti_aliasing=True)
+        gimg = (gimg > thresh).astype(float)
+        levels.append(gimg)
+        np.maximum(res, gimg, res)
+        cur = transform.downscale_local_mean(cur, (2,2))
+        #cur = transform.resize(cur, [cur.shape[0]//2, cur.shape[1]//2], anti_aliasing=True)
+    return res, levels
+
 class ShapeRasterizer:
     ''' Helper class to rasterize shapes via PIL'''
     def __init__(self, src_rect, raster_size=512, debug_draw=False):
