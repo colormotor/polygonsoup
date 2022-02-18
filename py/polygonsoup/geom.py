@@ -1287,10 +1287,20 @@ def select_convex_vertex(P, area=None):
                 verts.append(v)
     return verts[-1]
 
+
 def get_point_in_polygon(P, area=None):
     ''' Get a point inside polygon P
+        if P is a tuple (S, i), P=S[i] and test considers multiple shape contours
         See http://apodeline.free.fr/FAQ/CGAFAQ/CGAFAQ-3.html
         and O'Rourke'''
+    if type(P) == tuple:
+        # With a tuple assume we are indexing a shape
+        S, ind = P
+        P = S[ind]
+        test_shape = True
+    else:
+        S = []
+
     n = len(P)
     if area is None:
         area = polygon_area(P)
@@ -1306,64 +1316,22 @@ def get_point_in_polygon(P, area=None):
             d = distance(P[q], P[v])
             if d < dist:
                 dist = d
-                inside.append(q)
+                inside.append(P[q])
+    if S: # With a compound shape we need to also test the other vertices
+        for si, Q in enumerate(S):
+            if si==ind:
+                continue
+            n = len(Q)
+            for i in range(n):
+                if is_point_in_triangle(Q[i], [P[a], P[v], P[b]]):
+                    d = distance(P[q], P[v])
+                    if d < dist:
+                        dist = d
+                        inside.append(Q[i])
     if not inside:
-        return (P[a] + P[b])/2
+        return (P[a] + P[v] + P[b])/3
     # no points inside triangle, select midpoint
-    return (P[inside[-1]] + P[v])/2
-
-def get_holes(S, get_points_and_areas=False):
-    '''Return an array with same size as S with 0 not a hole an 1 a hole
-    Optionally return positions in sub-contours and their areas'''
-    areas = [polygon_area(P) for P in S]
-    points = [get_point_in_polygon(P, area) for P, area in zip(S, areas)]
-    holes = [True if not is_point_in_shape(points[i], S) else False  for i, P in enumerate(S)]
-    if get_points_and_areas:
-        return holes, points, areas
-    return holes
-
-
-def select_convex_vertex(P, area=None):
-    ''' Select convex vertex (with arbitrary winding)'''
-    if area is None:
-        area = polygon_area(P)
-    n = len(P)
-    maxh = 0
-    verts = []
-    for v in range(n):
-        a, b = (v-1)%n, (v+1)%n
-        if angle_between(P[v] - P[a], P[b] - P[v])*area > 0:
-            h = point_line_distance(P[v], P[a], P[b])
-            if h > maxh:
-                maxh = h
-                verts.append(v)
-    return verts[-1]
-
-
-def get_point_in_polygon(P, area=None):
-    ''' Get a point inside polygon P
-        See http://apodeline.free.fr/FAQ/CGAFAQ/CGAFAQ-3.html
-        and O'Rourke'''
-    n = len(P)
-    if area is None:
-        area = polygon_area(P)
-    v = select_convex_vertex(P, area)
-    a, b = (v-1)%n, (v+1)%n
-    inside = []
-    dist = np.inf
-    # Check if no other point is inside the triangle a, v, b
-    # and select closest to v if any present
-    for i in range(n-3):
-        q = (b+1+i)%n
-        if is_point_in_triangle(P[q], [P[a], P[v], P[b]]):
-            d = distance(P[q], P[v])
-            if d < dist:
-                dist = d
-                inside.append(q)
-    if not inside:
-        return (P[a] + P[b])/2
-    # no points inside triangle, select midpoint
-    return (P[inside[-1]] + P[v])/2
+    return (inside[-1] + P[v])/2
 
 
 def get_holes(S, get_points_and_areas=False):
@@ -1375,6 +1343,7 @@ def get_holes(S, get_points_and_areas=False):
     if get_points_and_areas:
         return holes, points, areas
     return holes
+
 
 def get_points_in_holes(S):
     '''Get positions inside the holes of S (if any)'''
@@ -1391,9 +1360,8 @@ def fix_shape_winding(S):
         is_shape = False
     # Make sure that contours don't have repeated end-points because that would break
     # subsequent computations
-    S = [geom.cleanup_contour(P, closed=True) for P in S]
+    S = [cleanup_contour(P, closed=True) for P in S]
     # Identify holes
-
     holes, points, areas = get_holes(S, get_points_and_areas=True)
     S2 = []
 
@@ -1409,6 +1377,7 @@ def fix_shape_winding(S):
     if not is_shape:
         return S2[0]
     return S2
+
 
 def get_polygons_with_holes(S):
     '''Return an array with same size as S with 0 not a hole an 1 a hole
