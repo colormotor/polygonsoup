@@ -118,6 +118,7 @@ def stroke(S, clr='k', closed=False, **kwargs):
     if closed:
         P = np.vstack([P, P[0]])
 
+    cfg.plotter._stroke(P)
     plt.plot(P[0], P[1], color=mpl.colors.to_rgb(clr), **kwargs)
 
 def fill(S, clr, **kwargs):
