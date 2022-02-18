@@ -23,7 +23,7 @@ def load_model(path):
     return model.GetOutput()
 
 
-def contour_lines(poly_data, normal, num=40):
+def contour_lines(poly_data, normal, num=40, get_normals=False):
     ''' Generates contour lines for a polydata object'''
     normals = vtk.vtkPolyDataNormals()
     normals.SetInputData(poly_data)
@@ -45,7 +45,11 @@ def contour_lines(poly_data, normal, num=40):
     cutter.GenerateValues(num, -r, r)
     cutter.Update()
 
-    return vtk_to_polylines(cutter)
+    polylines = vtk_to_polylines(cutter)
+    if get_normals:
+        return polylines, vtk_to_normals(cutter)
+    else:
+        return polylines
 
 def silhouette(poly_data, view, feature_angle=True, border_edges=True):
     ''' Generates silhouette contours for a polydata object'''
@@ -67,6 +71,28 @@ def silhouette(poly_data, view, feature_angle=True, border_edges=True):
     silhouette.Update()
     contours = vtk_to_polylines(silhouette)
     return contours
+
+def vtk_to_normals(obj):
+    '''Convert vtk output to polylines'''
+    strips = vtk.vtkStripper()
+    strips.SetInputData(obj.GetOutput())
+    strips.Update()
+
+    poly = strips.GetOutput()
+    normals = np.array(poly.GetNormals().GetData())
+    lines = np.array(poly.GetLines().GetData())
+    n = len(lines)
+    res = []
+    i = 0
+    while i < n:
+        res.append([])
+        nl = lines[i]
+        i += 1
+        for c in range(nl):
+            res[-1].append(normals[lines[i]])
+            i += 1
+
+    return res
 
 def vtk_to_polylines(obj):
     '''Convert vtk output to polylines'''
