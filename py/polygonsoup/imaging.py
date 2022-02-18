@@ -174,6 +174,9 @@ class ShapeRasterizer:
         self.debug_draw = debug_draw
         self.context = self.create_context()
 
+    def clear(self, color=0):
+        self.set_context(self.create_context(color))
+
     def create_context(self, color=0):
         ''' Create a new image with given size'''
         im = Image.new("L", self.raster_size, color)
@@ -205,6 +208,13 @@ class ShapeRasterizer:
             S = [S]
         S = geom.affine_transform(self.mat, S)
         draw.shape(shape_to_outline(S), color)
+
+    def line(self, a, b, color=255, lw=1, context=None):
+        self.set_context(context)
+        im, draw = self.context
+        a = geom.affine_transform(self.mat, a)
+        b = geom.affine_transform(self.mat, b)
+        draw.line((tuple(a), tuple(b)), fill=255, width=lw) #, joint='curve')
 
     def stroke_shape(self, S, lw=1, color=255, context=None):
         self.set_context(context)
