@@ -10,8 +10,8 @@ import polygonsoup.geom as geom
 import polygonsoup.svg as svg
 import polygonsoup.hatch as hatch
 
-#plotter = plotters.AxiDrawClient() # Socket connection to axidraw_server.py
-plotter = plotters.AxiPlotter() # Direct connection to AxiDraw using axi module
+plotter = plotters.AxiDrawClient() # Socket connection to axidraw_server.py
+# plotter = plotters.AxiPlotter() # Direct connection to AxiDraw using axi module
 #plotter = plotters.NoPlotter() # Simply draws output
 
 plot.figure('A5', plotter=plotter)
