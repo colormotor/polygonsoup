@@ -78,6 +78,16 @@ class AxiPlotter:
 class AxiDrawClient:
     ''' Plots to a remote instance of axidraw_server.py'''
     def __init__(self, address_or_settings='./client_settings.json', port=None, raw=False): #, blocking=False):
+        """
+        :param address_or_settings:  (Default value = './client_settings.json') This parameter can specify either an IP address for a server,
+        or the path to a json file containing the connection settings. The json file must contain the entries 'address' and 'port' with
+        the IP address and the port number of the server.
+        :param port:  (Default value = None) This parameter is required if adress_or_settings explicitly defines an IP address.
+        If a json settings file is specified, defining this parameter will override the port defined in the file.
+        :param raw:  (Default value = False): This will send coordinates (unscaled) to the server that will not be automatically scaled.
+        Avoid using unless the coordinate system of the drawing fits in the drawing area.
+        :param blocking:  (Default value = False)
+        """
         if '.json' in address_or_settings:
             import json
             try:
