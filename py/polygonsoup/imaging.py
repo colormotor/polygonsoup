@@ -26,13 +26,13 @@ def find_contours(im, invert=False, thresh=127):
     #im = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
     if im.dtype != bool:
         if invert:
-            ret, thresh = cv2.threshold(im,thresh,256,cv2.THRESH_BINARY_INV)
+            ret, thresh_img = cv2.threshold(im,thresh,256,cv2.THRESH_BINARY_INV)
         else:
-            ret, thresh = cv2.threshold(im,thresh,256,0)
+            ret, thresh_img = cv2.threshold(im,thresh,256,0)
     else:
-        thresh = cv2.convertScaleAbs(im.astype(float))
+        thresh_img = cv2.convertScaleAbs(im.astype(float))
     #image, contours, hierarchy = cv2.findContours(thresh,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
-    contours, hierarchy = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    contours, hierarchy = cv2.findContours(thresh_img, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     S = []
     for ctr in contours:
         S.append(np.vstack([ctr[:,0,0], ctr[:,0,1]]).T)
