@@ -94,6 +94,11 @@ def vtk_to_normals(obj):
 
     return res
 
+def vtk_to_triangle_mesh(model):
+    points = np.array(model.GetPoints().GetData())
+    triangles = [[model.GetCell(i).GetPointId(j) for j in range(3)] for i in range(model.GetNumberOfCells())]
+    return points, triangles
+
 def vtk_to_polylines(obj):
     '''Convert vtk output to polylines'''
     strips = vtk.vtkStripper()
