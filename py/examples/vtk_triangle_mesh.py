@@ -23,7 +23,12 @@ import vtk
 
 model, pos, name = vtku.load_model('teapot.obj'), vec(0, -0.7, -14.5), 'Teapot'
 #model, pos, name = vtku.load_model('teapot.obj'), vec(0, -0.08, -0.55), 'Bunny'
+#
 points, triangles = vtku.vtk_to_triangle_mesh(model) # <- See this function (in vtk_utils.py) to check how to load a triangle mesh
+# Or optionally use vtk to get vertices and triangles:
+# points = np.array(model.GetPoints().GetData()) # Get triangle mesh vertices
+# triangles = [[model.GetCell(i).GetPointId(j) for j in range(3)] for i in range(model.GetNumberOfCells())]
+
 # Compose triangles into 3d contours that we can transform with the geom utilities
 contours = np.array([[points[j] for j in tri] for tri in triangles])
 
