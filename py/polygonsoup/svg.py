@@ -196,3 +196,10 @@ def load_svg_polylines(path):
 def load_svg_bezier_chains(file_path, subd=40):
     paths = svg_to_beziers(file_path)
     return [path.T for path in paths]
+
+def save_svg_polylines(S, file_path, closed=False):
+    if type(closed)==bool:
+        closed = [closed for _ in S]
+    S = [geom.close(P) if c else P for P, c in zip(S, closed)]
+    paths = [svg.Path(*[svg.Line(start=complex(*a), end=complex(*b)) for a, b in zip(P, P[1:])]) for P in S if len(P) > 1]
+    svg.wsvg(paths, filename=file_path)
