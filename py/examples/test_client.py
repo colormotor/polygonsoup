@@ -8,10 +8,15 @@ import polygonsoup.plotters as plotters
 import polygonsoup.geom as geom
 reload(plotters)
 
-plotter = plotters.AxiDrawClient() # Socket connection to axidraw_server.py
+# plotter = plotters.AxiDrawClient() # Socket connection to axidraw_server.py
+# By default the above tries to find the file "client_settings.json" in the same directory as the script
+
 # plotter = plotters.AxiPlotter() # Direct connection to AxiDraw using axi module
-# plotter = plotters.NoPlotter() # Simply draws output
+plotter = plotters.NoPlotter() # Simply draws output
 
 plot.figure('A5', plotter=plotter)
-plot.stroke_rect(geom.make_rect(0, 0, 8, 8), 'k')
+plot.stroke(np.array([[0, 0],
+                      [2, 0],
+                      [2, 1],
+                      [0, 1]])*3, closed=True)
 plot.show()

@@ -13,8 +13,8 @@ import polygonsoup.bezier as bezier
 reload(bezier)
 
 #plotter = plotters.AxiDrawClient() # Socket connection to axidraw_server.py
-plotter = plotters.AxiPlotter() # Direct connection to AxiDraw using axi module
-#plotter = plotters.NoPlotter() # Simply draws output
+#plotter = plotters.AxiPlotter() # Direct connection to AxiDraw using axi module
+plotter = plotters.NoPlotter() # Simply draws output
 
 plot.figure('A5', plotter=plotter)
 

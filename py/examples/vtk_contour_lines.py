@@ -20,8 +20,8 @@ import polygonsoup.clipper as clip
 
 import polygonsoup.vtk_utils as vtku
 
-#model, pos, name = vtku.load_model('teapot.obj'), vec(0, -0.7, -14.5), 'Teapot'
-model, pos, name = vtku.load_model('stanford-bunny.obj'), vec(0, -0.08, -0.55), 'Bunny'
+model, pos, name = vtku.load_model('teapot.obj'), vec(0, -0.7, -14.5), 'Teapot'
+# model, pos, name = vtku.load_model('stanford-bunny.obj'), vec(0, -0.08, -0.55), 'Bunny'
 contours = vtku.contour_lines(model, [0,1,0], 60)
 
 # Viewport rect
@@ -35,7 +35,7 @@ view = (trans_3d(pos) @
 proj = perspective(geom.radians(30), rect_aspect(viewport), 0.1)
 # Viewport transformations 3d -> 2d
 contours_v = view_3d(contours, view, proj, viewport, clip=True)
-
+contours_v = [geom.smoothing_spline(0, np.array(P), ds=0.5, degree=2) for P in contours_v if len(P) > 1]
 # def join_bruteforce(S):
 #     G = nx.Graph()
 #     visited = set()
@@ -75,11 +75,13 @@ if clip_contours:
 #def join_bruteforce(ctrs):
 
 #contours_v = [geom.smoothing_spline(0, np.array(P), ds=2, smooth_k=0) for P in contours_v]
-#plotter = plotters.AxiDrawClient(port=80) # Socket connection to axidraw_server.py
+plotter = plotters.AxiDrawClient(port=80, raw=True) #9001) # Socket connection to axidraw_server.py
 #plotter = plotters.AxiPlotter() # Direct connection to AxiDraw using axi module
-plotter = plotters.NoPlotter() # Simply draws output
+#plotter = plotters.NoPlotter() # Simply draws output
 
-plot.figure('A3', plotter=plotter)
+#plot.figure('A3', plotter=plotter)
+plot.figure((600, 600), plotter=plotter, figscale=0.01)
+
 #plot.stroke_rect(viewport, 'r', linestyle=':')
 #plot.stroke(contours_v, 'k')
 for i, ctr in enumerate(contours_v):
