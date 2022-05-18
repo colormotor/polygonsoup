@@ -147,7 +147,7 @@ def fill_stroke(S, clr, strokeclr, **kwargs):
     cmds = []
     for P in S:
         # Send out
-        cfg.plotter.stroke(P)
+        cfg.plotter._stroke(P)
 
         path += [p for p in P] + [P[0]]
         cmds += [Path.MOVETO] + [Path.LINETO for p in P[:-1]] + [Path.CLOSEPOLY]
@@ -270,13 +270,15 @@ def show_drawing(drawing, size='A4', title='', padding=0, plotter=NoPlotter()):
         stroke(P, 'k')
     show(title, padding)
 
-def figure(size="A5", plotter=NoPlotter()):
+def figure(size="A5", plotter=NoPlotter(), figscale=1):
     if type(size)==str:
         w, h = paper_sizes[size]
     else:
         w, h = size
     fig = plt.figure(dpi=cfg.dpi)
-    fig.set_size_inches(w, h)
+    wfig, hfig = w*figscale, h*figscale
+
+    fig.set_size_inches(wfig, hfig)
     if plotter is None:
         plotter = NoPlotter()
     cfg.plotter = plotter
