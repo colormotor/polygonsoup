@@ -55,6 +55,9 @@ def is_empty(S):
 def vec(*args):
     return np.array(args)
 
+def colvec(*args):
+    return np.array(args).reshape(-1,1)
+
 def radians( x ):
     return np.pi/180*x
 
@@ -64,9 +67,22 @@ def degrees( x ):
 def normalize(v):
     return v / np.linalg.norm(v)
 
-def angle_between(a, b):
-    ''' Angle between two vectors (2d)'''
+def angle_between(*args):
+    ''' Angle between two vectors (2d) [-pi,pi]'''
+    if len(args)==2:
+        a, b = args
+    else:
+        p1, p2, p3 = args
+        a = p3 - p2 # TODO checkme
+        b = p1 - p2
     return np.arctan2( a[0]*b[1] - a[1]*b[0], a[0]*b[0] + a[1]*b[1] )
+
+def dihedral_angle(*args):
+    ''' Angle between two vectors (2d) [0,2pi]'''
+    a = angle_between(*args)
+    if a < 0:
+        a = a + np.pi*2
+    return a
 
 def distance(a, b):
     return norm(b-a)
@@ -812,17 +828,29 @@ def _point_to_np(p):
     return np.array([float(p.x()),
                  float(p.y())])
 
-def compute_planar_map(polylines):
+def iter_pass(it, txt=''):
+    for v in it:
+        yield v
+
+def compute_planar_map(polylines, progress=iter_pass):
     import skgeom
     arr = skgeom.arrangement.Arrangement()
 
+    segs = []
     for P in polylines:
         for a, b in zip(P, P[1:]):
-            try:
-                arr.insert(skgeom.Segment2(skgeom.Point2(*a),
+            segs.append((a,b))
+    for a, b in progress(segs, 'comuting planar arrangement'):
+    # for P in polylines:
+    # for a, b in zip(P, P[1:]):
+        if distance_sq(a, b) > 1e-20:
+            arr.insert(skgeom.Segment2(skgeom.Point2(*a),
                                     skgeom.Point2(*b)))
-            except Exception as e:
-                print(e)
+        #else:
+        #    print(geom.distance_sq(a, b))
+        # except Exception as e:
+        #     pass #print((a, b))
+        #     #print(e)
 
     return arr
 
@@ -852,6 +880,35 @@ def face_vertices(face):
     P.append(_point_to_np(halfedge.source().point()))
 
     return P
+
+def face_indices(face, index_map):
+    if face.is_unbounded():
+        return []
+    i = face.outer_ccb
+    first = next(i)
+    halfedge = next(i)
+    I = []
+    while first != halfedge:
+        I.append(index_map.vertex_index(halfedge.source()))
+        halfedge = next(i)
+    I.append(index_map.vertex_index(halfedge.source()))
+    return I
+
+def planar_graph(polylines, get_faces=False, progress=iter_pass):
+    # NB this assumes that VertexIndexMap is implemented in skgeom
+    import skgeom
+    import networkx as nx
+    arr = compute_planar_map(polylines, progress)
+    index_map = skgeom.VertexIndexMap(arr)
+    vertices = [np.array([v.point().x(), v.point().y()]).astype(np.float32) for v in arr.vertices]
+    G = nx.Graph()
+    for he in arr.halfedges:
+        G.add_edge(index_map.vertex_index(he.source()),
+                   index_map.vertex_index(he.target()))
+    if get_faces:
+        faces = [face_indices(face, index_map) for face in arr.faces]
+        return G, vertices, [f for f in faces if f]
+    return G, vertices
 
 def curvature(P, closed=0):
     ''' Contour curvature'''
@@ -1062,6 +1119,12 @@ def triangle_area( a, b, c ):
     da = a-b
     db = c-b
     return det(np.vstack([da, db]))*0.5
+
+def collinear(a, b, p, eps=1e-5):
+    return abs(triangle_area(a, b, p)) < eps
+
+def segments_collinear(a, b, c, d, eps=1e-5):
+    return collinear(a, b, c, eps) and collinear(a, b, d, eps)
 
 def left_of(p, a, b, eps=1e-10):
     # Assumes coordinate system with y up so actually will be "right of" if visualizd y down
