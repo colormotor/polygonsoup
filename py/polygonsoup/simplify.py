@@ -91,8 +91,12 @@ def _rdp_iter(M, start_index, last_index, epsilon, dist):
 
     return indices
 
+def cleanup_contour(X, eps = 1e-10, closed = False, get_indices=False):
+    distfn = lambda p, a, b: max(np.linalg.norm(p - a), np.linalg.norm(p - b))
+    return dp_simplify(X, eps, get_indices, closed, distfn);
 
-def dp_simplify(M, eps, get_indices=False, closed=False):
+
+def dp_simplify(M, eps, get_indices=False, closed=False, dist=pldist):
     ''' Ramer-Douglas-Peucker Simplification adapted from https://github.com/fhirschmann/rdp/'''
     dist=pldist
     if closed:
