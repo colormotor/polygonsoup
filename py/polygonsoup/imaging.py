@@ -22,6 +22,16 @@ import numpy as np
 cfg = lambda: None
 cfg.morpho_kernel_size = 5
 
+def premultiplied_alpha(alphachannel, rgb):
+    return np.array([[np.array([a*rgb[0], a*rgb[1], a*rgb[2], a]) for a in row] for row in alphachannel])
+
+def composite_premultiplied(a, b):
+    #DestinationColor.rgb = (SourceColor.rgb * One) + (DestinationColor.rgb * (1 - SourceColor.a));
+    return b[:,:,:3] + (a[:,:,:3].T*(1-b[:,:,3].T)).T
+
+def colorize(img, rgb):
+    return np.array([[v*np.array(rgb) for v in row] for row in img])
+
 def find_contours(im, invert=False, thresh=127):
     #im = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
     if im.dtype != bool:
@@ -37,6 +47,8 @@ def find_contours(im, invert=False, thresh=127):
     for ctr in contours:
         S.append(np.vstack([ctr[:,0,0], ctr[:,0,1]]).T)
     return S
+
+
 
 def distance_transform(edgemap, get_inds=True):
     ''' Distance transform of an edge image (e.g. created with Canny)
@@ -115,21 +127,21 @@ def shape_to_outline(S):
 
 # Gabor filter edge detection, approximately as described in
 # Tresset and Leymarie, 2013, Portrait drawing by Paul the robot
-def build_gabor_filters(n, sigma=2.5, gamma=0.5, lambd=5, ksize=9):
+def build_gabor_filters(n, sigma=2.5, gamma=0.5, lambd=7, ksize=16):
     filters = []
     # cv2.getGaborKernel(ksize, sigma, theta, lambda, gamma, psi, ktype)
     for theta in np.linspace(0, np.pi, n+1)[:-1]: #np.arange(0, np.pi, np.pi / 8):
         #for lamda in np.arange(0, np.pi, np.pi/4):
 
-        kern = cv2.getGaborKernel((ksize, ksize), sigma, theta, lambd, gamma, 0, ktype=cv2.CV_32F)
-        kern /= 1.5*kern.sum()
+        kern = cv2.getGaborKernel((ksize, ksize), sigma, theta, lambd, gamma, 0, ktype=cv2.CV_64F)
+        kern /= 1.0*kern.sum()
         filters.append(kern)
     return filters
 
 def gabor(img, filters):
     accum = np.zeros_like(img)
     for kern in filters:
-        fimg = cv2.filter2D(img, cv2.CV_32F, kern)
+        fimg = cv2.filter2D(img, -1, kern)
         np.maximum(accum, fimg, accum)
     return accum
 
@@ -139,20 +151,23 @@ def multiscale_gabor(img, nscales, thresh, sigma=2.5):
     res = np.zeros_like(img)
     levels = []
     for i in range(nscales):
-        n = 8
+        n = 16
         if i > 0:
             n = 8
         filters = build_gabor_filters(n, sigma)
         if cur.shape[0] < 9 or cur.shape[1] < 9:
             break
+        print(cur.shape)
         gimg = gabor(cur, filters)
+        gimg = gimg/np.max(gimg)
         gimg = transform.resize(gimg, img.shape, anti_aliasing=True)
-        gimg = (gimg > thresh).astype(float)
+        #gimg = (gimg > thresh).astype(float)
         levels.append(gimg)
-        np.maximum(res, gimg, res)
+        #print(np.max(gimg))
+        res = np.maximum(res, gimg, res)
         cur = transform.downscale_local_mean(cur, (2,2))
-        #cur = transform.resize(cur, [cur.shape[0]//2, cur.shape[1]//2], anti_aliasing=True)
-    return res, levels
+        # cur = transform.resize(cur, [cur.shape[0]//2, cur.shape[1]//2], anti_aliasing=True)
+    return res/np.max(res), levels
 
 class ShapeRasterizer:
     ''' Helper class to rasterize shapes via PIL'''
