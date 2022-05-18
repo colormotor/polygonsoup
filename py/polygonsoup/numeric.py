@@ -30,3 +30,48 @@ def weighted_average(v, w):
     v = np.array(v)
     w = np.array(w)
     return np.sum(w*v) / np.sum(w)
+
+def dtw(x, y, w = np.inf, get_dist = False, distfn = lambda a, b: np.dot(b-a, b-a)):
+    nx = len(x)
+    ny = len(y)
+    w = max(w, abs(nx-ny))
+
+    D = np.ones((nx, ny))*np.inf
+    D[0,0] = 0
+
+    for i in range(nx):
+        for j in range(max(1, i-w), min(ny, i+w)):
+            D[i][j] = 0
+
+    for i in range(nx):
+        for j in range(max(1, i-w), min(ny, i+w)):
+            D[i,j] = distfn(x[i], y[j]) + np.min([D[i - 1][j], D[i][j - 1], D[i - 1][j - 1]])
+
+    if get_dist:
+        return D[nx - 1, ny - 1]
+
+    i = nx - 1
+    j = ny - 1
+    # recover path
+    p = [[i,j]]
+
+    while i > 0 and j > 0:
+        id = np.argmin([D[i][j - 1], D[i - 1][j], D[i - 1][j - 1]])
+        if id == 0:
+            j = j - 1
+        elif id == 1:
+            i = i - 1
+        else:
+            i = i - 1
+            j = j - 1
+
+        p.append([i, j])
+
+    return p[::-1]
+
+
+def dtw_path(x, y, w = np.inf):
+  return dtw(x, y, w, False)
+
+def dtw_dist(x, y, w = np.inf):
+  return mth.dtw(x, y, w, True)
