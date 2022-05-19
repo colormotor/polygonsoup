@@ -198,8 +198,12 @@ class AxiDrawClient:
         return False
 
     def add_path(self, P):
-        self.sendln('PATHCMD stroke %d %s'%path_to_str(P))
-
+        if not len(P):
+            return
+        if len(P[0])==2:
+            self.sendln('PATHCMD stroke %d %s'%path_to_str(P))
+        elif len(P[0])==3:
+            self.sendln('PATHCMD stroke3 %d %s'%path_to_str(P))
     def pen_up(self):
         self.sendln('PATHCMD pen_up')
 
@@ -223,7 +227,11 @@ class AxiDrawClient:
             if box is None:
                 box = geom.bounding_box(self.paths)
             mat = geom.rect_in_rect_transform(box, geom.make_rect(0, 0, *self.bounds), padding)
-            self.paths = geom.affine_transform(mat, self.paths)
+            # Assume we might have a z coordinate here
+            self.paths = [np.array(P) for P in self.paths]
+            for i in range(len(self.paths)):
+                self.paths[i][:,:2] = geom.affine_transform(mat, self.paths[i][:,:2])
+            #self.paths = geom.affine_transform(mat, self.paths)
         self.draw_paths(self.paths, title, close=True)
 
     # Visualization (use plot.py instead)
@@ -266,7 +274,10 @@ def path_to_str(P):
     ''' Convert a path to a (num_points, point sequence) tuple'''
     #if type(P) == np.ndarray:
     #    P = P.T
-    return len(P), ' '.join(['%f %f'%(p[0], p[1]) for p in P])
+    if len(P[0]) == 2:
+        return len(P), ' '.join(['%f %f'%(p[0], p[1]) for p in P])
+    return len(P), ' '.join(['%f %f %f'%(p[0], p[1], p[2]) for p in P])
+
 
 def recv_line(sock):
     s = ''
