@@ -50,3 +50,129 @@ def curved_skeletal_stroke(prototype, spine_, widths, closed=False, smooth_k=10,
         Q = centers + normals*h*w
         flesh.append(Q.T)
     return flesh
+
+def fat_path(P, W, closed=False, miter_limit=2, angle_thresh=160):
+    W = np.array(W)
+
+    D = geom.tangents(P, closed)
+    N = [-geom.perp(geom.normalize(d)) for d in D]
+    Alpha = geom.turning_angles(P, closed, True)
+    I = np.where(np.abs(Alpha) > geom.radians(angle_thresh))[0]
+    if len(I):
+        print((len(P), len(W)))
+        I = [0] + list(I) + [len(P)-1]
+        print([[a, b] for a, b in zip(I, I[1:])])
+        #print(I)
+        return sum([fat_path(P[a:b+1], W[a:b], False, miter_limit) for a, b in zip(I, I[1:])], [])
+
+    if W.ndim < 2:
+        W = np.vstack([W, W]).T
+
+    for i in I:
+        plut.fill_circle(P[i], 0.5, 'r')
+    m = len(D)
+    frames = []
+    frame_count = m if closed else m - 1
+
+    # local coordinate frames
+    for i in range(frame_count):
+        p = P[(i + 1)%m]
+        d1 = geom.normalize(D[i])
+        d2 = geom.normalize(D[(i + 1)%m])
+        w1 = W[i, 1]
+        w2 = W[(i+1)%m,0]
+        alpha = Alpha[(i + 1)%m]
+        if abs(alpha) < 1e-5:
+            alpha = 1e-5
+        o1 = w2 / np.sin(alpha);  # eq 2
+        o2 = w1 / np.sin(alpha);  # eq 2
+        u1 = d1 * o1*np.sign(alpha)
+        u2 = -d2 * o2*np.sign(alpha)
+        frames.append((u1, u2))
+
+    # envelope
+    L = [P[0] + N[0]*W[0,0]]
+    R = [P[0] - N[0]*W[0,0]]
+
+    for i in range(frame_count):
+        p    = P[(i + 1) % m];
+        u1o1 = frames[i][0];
+        u2o2 = frames[i][1];
+
+        alpha = Alpha[(i + 1) % m]
+        b = u1o1 + u2o2
+        #plut.draw_line(p, p+u1o1, 'r')
+        #plut.draw_line(p, p+u2o2, 'b')
+        #plut.draw_line(p, p-b, 'm')
+
+        unfold = True
+        ip1 = (i + 1) % m
+        limit = max(W[i,1], W[ip1,0]) * miter_limit
+
+        d1    = D[i]
+        d2    = D[ip1]
+        hu1   = geom.normalize(u1o1)
+        hu2   = geom.normalize(u2o2)
+
+        if alpha < 0.:
+            concave_side = L
+            convex_side  = R
+        else:
+            concave_side = R
+            convex_side  = L
+
+        bb = [b, b] # apply_miter(b, p, d1, d2, limit)
+        convex_side.append(p + bb[0])
+        convex_side.append(p + bb[1])
+        #concave_side.append(p - b + hu1)
+        #concave_side.append(p - b + hu2)
+        concave_side.append(p - b)
+        concave_side.append(p - b)
+
+    alpha = Alpha[0]
+    if alpha < 0.:
+        concave_side = L
+        convex_side  = R
+    else:
+        concave_side = R
+        convex_side  = L
+
+    if not closed:
+        L.append(P[-1] + N[-1] * W[-1, 1])
+        R.append(P[-1] - N[-1] * W[-1, 1])
+    else:
+        concave_side[0] = concave_side[-1]
+        convex_side[0]  = convex_side[-1]
+        concave_side.pop()
+        convex_side.pop()
+    #plut.stroke(np.array(L), 'r')
+    #plut.stroke(np.array(R), 'b')
+    envelope = np.array(L + R[::-1])
+    return [envelope]
+
+def apply_miter(b, p, d1, d2, limit):
+    l = np.linalg.norm(b)
+    if l <= limit:
+        return [b, b]
+    bu = b / l
+    bp = geom.perp(bu) * 10
+
+    p1a = p + b
+    p1b = p1a - d1
+
+    p2a = p + b
+    p2b = p2a + d2
+
+    bp1 = np.zeros(2)
+    bp2 = np.zeros(2)
+    res, bp1 = geom.line_segment_intersection(
+                            p + bu * limit,
+                            p + bu * limit + bp,
+                            p1a,
+                            p1b)
+    res, bp2 = geom.line_segment_intersection(
+                            p + bu * limit,
+                            p + bu * limit + bp,
+                            p2a,
+                            p2b)
+    return [bp1 - p, bp2 - p]
