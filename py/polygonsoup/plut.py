@@ -132,6 +132,8 @@ def fill(S, clr, **kwargs):
     path = []
     cmds = []
     for P in S:
+        if not len(P):
+            continue
         path += [p for p in P] + [P[0]]
         cmds += [Path.MOVETO] + [Path.LINETO for p in P[:-1]] + [Path.CLOSEPOLY]
     plt.gca().add_patch(PathPatch(Path(path, cmds), color=clr, fill=True, linewidth=0, **kwargs))
@@ -257,7 +259,7 @@ def set_axis_limits(P, pad=0, invert=True, ax=None, y_limits_only=False):
         ax.set_xbound(xlim)
 
     # Hack to get matplotlib to actually respect limits?
-    stroke_rect([geom.vec(xlim[0],ylim[0]), geom.vec(xlim[1], ylim[1])], 'r', alpha=0)
+    stroke_rect([geom.vec(xlim[0],ylim[0]), geom.vec(xlim[1], ylim[1])], 'r', alpha=0, plot=False)
     # ax.set_clip_on(True)
     if invert:
         ax.invert_yaxis()
@@ -307,7 +309,7 @@ def setup(ydown=True, axis=False, box=None, debug_box=False):
     if ydown:
         ax.invert_yaxis()
     if debug_box and box is not None:
-        stroke_rect(box, 'r')
+        stroke_rect(box, 'r', plot=False)
     if box is not None:
         set_axis_limits(box, invert=ydown, ax=ax, y_limits_only=False)
 
@@ -495,3 +497,5 @@ def default_color_alpha(i, alpha):
 def cmap(v, colormap='turbo'): #'PuRd'):
     c = matplotlib.cm.get_cmap(colormap)
     return c(v)
+
+fig = figure

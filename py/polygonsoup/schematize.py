@@ -27,15 +27,12 @@ def radians( x ):
 
 def rot_2d( theta ):
     m = np.eye(2)
-
     ct = np.cos(theta)
     st = np.sin(theta)
-
     m[0,0] = ct
     m[0,1] = -st
     m[1,0] = st
     m[1,1] = ct
-
     return m
 
 def perp(x):
@@ -84,7 +81,8 @@ def schematize(P, C, angle_offset, closed=False, get_edge_inds=False, maxiter=10
     n = len(P)
 
     if closed:
-        P = P + [P[0]] #, P[1]]
+        P = P + [np.array(P[0])] #, P[1]]
+        n = n + 1
 
     edges = [(i, i+1) for i in range(n-1)]
     for a, b in edges:
@@ -161,18 +159,22 @@ def schematize(P, C, angle_offset, closed=False, get_edge_inds=False, maxiter=10
 
     P.append(project_on_line(blocks.back.V[-1], b, b + d))
     edge_inds.append(blocks.back.edge_index)
+
     if closed and len(P) > 2:
         # pass #P.pop()
-        res, ins = line_intersection((P[0], P[1]), (P[-1], P[-2]))
+        res, ins = geom.segment_intersection(P[1], P[0], P[-2], P[-1])
         if res:
-            P[0] = ins
-            P[-1] = ins
-        elif len(P) > 3:
+            P[0] = np.array(ins)
+            P[1] = np.array(ins)
             P.pop()
-            res, ins = line_intersection((P[0], P[1]), (P[-1], P[-2]))
+
+        else:
+            res, ins = geom.ray_intersection(P[1], P[0], P[-2], P[-1])
             if res:
-                P[0] = ins
-                P[-1] = ins
+                P[0] = np.array(ins)
+                P[-1] = np.array(ins)
+
+            P.pop()
 
         #if len(P) > 3:
         #    P.pop()
