@@ -10,7 +10,7 @@ Plotter-friendly graphics utilities
 plotters - plotter/drawing machine interfaces
 '''
 
-import socket, sys
+import socket, sys, copy
 import numpy as np
 import time
 import polygonsoup.geom as geom
@@ -171,7 +171,14 @@ class AxiDrawClient:
         try:
             self.drawing_start(title)
             for P in S:
-                self.add_path(P)
+                if type(P) == str:
+                    print('sending cmd ' + P)
+                    self.sendln('PATHCMD cmd ' + P)
+                    #self.sendln(P)
+                else:
+                    print('sending path ')
+                    print(P)
+                    self.add_path(P)
             self.drawing_end(close)
 
         except ConnectionRefusedError as e:
@@ -225,13 +232,16 @@ class AxiDrawClient:
         if self.raw:
             print('Resizing raw plot')
             if box is None:
-                box = geom.bounding_box(self.paths)
+                box = geom.bounding_box([P for P in self.paths if type(P) != str])
             mat = geom.rect_in_rect_transform(box, geom.make_rect(0, 0, *self.bounds), padding)
             # Assume we might have a z coordinate here
-            self.paths = [np.array(P) for P in self.paths]
+            # self.paths = [np.array(P) for P in self.paths]
+            self.paths = copy.deepcopy(self.paths)
             for i in range(len(self.paths)):
-                self.paths[i][:,:2] = geom.affine_transform(mat, self.paths[i][:,:2])
-            #self.paths = geom.affine_transform(mat, self.paths)
+                if type(self.paths[i]) != str:
+                    self.paths[i] = np.array(self.paths[i])
+                    self.paths[i][:,:2] = geom.affine_transform(mat, self.paths[i][:,:2])
+            #self.paths = [geom.affine_transform(mat, self.paths)
         self.draw_paths(self.paths, title, close=True)
 
     # Visualization (use plot.py instead)
