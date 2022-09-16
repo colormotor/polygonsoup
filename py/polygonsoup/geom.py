@@ -67,6 +67,9 @@ def degrees( x ):
 def normalize(v):
     return v / np.linalg.norm(v)
 
+def wedge2(a, b):
+    return a[0]*b[1] - a[1]*b[0]
+
 def angle_between(*args):
     ''' Angle between two vectors (2d) [-pi,pi]'''
     if len(args)==2:
@@ -96,6 +99,30 @@ def normc(X):
     Y = np.array(X)
     return Y / np.maximum(l, 1e-9).reshape(-1,1)
 
+
+def tangents(P, closed=False):
+    if closed:
+        P = np.vstack([P, P[0]])
+    return np.diff(P, axis=0)
+
+def turning_angles(P, closed=False, all_points=False, N=None):
+    if len(P) <= 2:
+        return np.zeros(len(P))
+    if N is None:
+        D = tangents(P, closed)
+        N = np.array([-perp(normalize(d)) for d in D])
+
+    if closed:
+        N = np.vstack([N[-1], N])
+
+    n = len(N)
+    A = np.zeros(n - 1)
+    for i in range(n-1):
+        A[i] = angle_between(N[i], N[i + 1])
+
+    if all_points and not closed:
+        A = np.concatenate([[0], A, [0]])
+    return A
 
 def normals_2d(P, closed=0, vertex=False):
     ''' 2d normals (fixme)'''
@@ -234,6 +261,9 @@ def intersect_lines_lsq(lines, l=0, reg_point=None):
         s = reg_point
     ins = np.dot(np.linalg.pinv(R + np.eye(2)*l), q + l*s)
     return ins
+
+def centroid(P):
+    return np.mean(P, axis=0)
 
 # Rect utilities
 def bounding_box(S, padding=0):
@@ -575,7 +605,7 @@ def _affine_transform_polyline(mat, P):
 
 def affine_transform(mat, data):
     if is_empty(data):
-        print('Empty data to affine_transform!')
+        # print('Empty data to affine_transform!')
         return data
     if is_polyline(data):
         P = data
@@ -764,8 +794,8 @@ class shapes:
 
     @staticmethod
     def circle(center, r, subd=80):
-        return close_path([vec(np.cos(th), np.sin(th))*r + center
-            for th in np.linspace(0, np.pi*2, subd)[:-1]])
+        return close_path(np.array([vec(np.cos(th), np.sin(th))*r + center
+                                    for th in np.linspace(0, np.pi*2, subd)[:-1]]))
 
     @staticmethod
     def random_radial_polygon(n, min_r=0.5, max_r=1., center=[0,0]):
@@ -832,6 +862,24 @@ def iter_pass(it, txt=''):
     for v in it:
         yield v
 
+def create_planar_map():
+    import skgeom
+    arr = skgeom.arrangement.Arrangement()
+    return arr
+
+def update_planar_map(arr, polylines, closed=False, verbose=True):
+    from skgeom import Point2, Segment2
+    for P in polylines:
+        if closed:
+            P = np.vstack([P, P[0]])
+        for a, b in zip(P, P[1:]):
+            try:
+                arr.insert(Segment2(Point2(*a),
+                                    Point2(*b)))
+            except Exception as e:
+                #pass #if verbose:
+                print(e)
+
 def compute_planar_map(polylines, progress=iter_pass):
     import skgeom
     arr = skgeom.arrangement.Arrangement()
@@ -853,6 +901,31 @@ def compute_planar_map(polylines, progress=iter_pass):
         #     #print(e)
 
     return arr
+
+def compute_planar_map_indexed(polylines, progress=iter_pass):
+    import skgeom
+    arr = skgeom.indexed_arrangement.Arrangement()
+
+    segs = []
+    for P in polylines:
+        for a, b in zip(P, P[1:]):
+            segs.append((a,b))
+    i = 0
+    for a, b in progress(segs, 'comuting planar arrangement'):
+    # for P in polylines:
+    # for a, b in zip(P, P[1:]):
+        if distance_sq(a, b) > 1e-20:
+            arr.insert(skgeom.Segment2(skgeom.Point2(*a),
+                                       skgeom.Point2(*b)), i)
+        i += 1
+        #else:
+        #    print(geom.distance_sq(a, b))
+        # except Exception as e:
+        #     pass #print((a, b))
+        #     #print(e)
+
+    return arr
+
 
 def planar_map_faces(planar):
     S = []
@@ -898,16 +971,21 @@ def planar_graph(polylines, get_faces=False, progress=iter_pass):
     # NB this assumes that VertexIndexMap is implemented in skgeom
     import skgeom
     import networkx as nx
-    arr = compute_planar_map(polylines, progress)
-    index_map = skgeom.VertexIndexMap(arr)
+    arr = compute_planar_map_indexed(polylines, progress)
+    # arr = compute_planar_map(polylines, progress)
+    index_map = skgeom.indexed_arrangement.VertexIndexMap(arr)
+    # index_map = skgeom.arrangement.VertexIndexMap(arr)
     vertices = [np.array([v.point().x(), v.point().y()]).astype(np.float32) for v in arr.vertices]
     G = nx.Graph()
     for he in arr.halfedges:
-        G.add_edge(index_map.vertex_index(he.source()),
+        ind = he.segment_index()
+        a, b = (index_map.vertex_index(he.source()),
                    index_map.vertex_index(he.target()))
+        G.add_edge(a, b,
+                   weight=distance(vertices[a], vertices[b]), segment_index=ind, segment_indices=list(he.segment_indices()))
     if get_faces:
         faces = [face_indices(face, index_map) for face in arr.faces]
-        return G, vertices, [f for f in faces if f]
+        return G, np.array(vertices), [f for f in faces if f]
     return G, vertices
 
 def curvature(P, closed=0):
@@ -999,6 +1077,41 @@ def uniform_sample( X, delta_s, closed=0, kind='slinear', data=None, inv_density
         return Y[:,:-1].T
     return Y.T
 
+
+def compute_bspline(pts, closed=False, alpha=1, degree=3, smooth_k=0, w=None, n = None):
+    if closed:
+        pts = np.vstack([pts, pts[0]])
+    if w is None:
+        w = np.ones(pts.shape[0])
+    elif is_number(w):
+        w = np.ones(pts.shape[0])*w
+    dim = pts.shape[1]
+    u = np.linspace(0, 1, pts.shape[0])
+    degree = min(degree, pts.shape[0]-1)
+    D = np.diff(pts, axis=0)
+    s = np.sqrt(np.sum([D[:,i]**2 for i in range(dim)], axis=0))+1e-5 #1e-3
+    l = np.sum(s)
+    s = s**(alpha)
+    u = np.cumsum(np.concatenate([[0.], s]))
+    u = u / u[-1]
+
+    tck, _ = splprep(pts.T, u=u, k=degree, per=closed, s=smooth_k)
+    if n is not None:
+        X = splev(np.linspace(0, 1, n), tck)
+        return tck, np.vstack(X).T
+    return tck
+
+def bspline(n, pts, der=0, closed=False, alpha=1, degree=3, smooth_k=0, w=None):
+    tck = compute_bspline(pts, closed, alpha, degree, smooth_k, w)
+    t = np.linspace(0, 1, n)
+    if type(der)==list:
+        res = []
+        for d in der:
+            res.append(np.vstack(splev(t, tck, der=d)).T)
+        return res
+    res = splev(t, tck, der=der)
+    return np.vstack(res).T
+
 def smoothing_spline(n, pts, der=0, ds=0., closed=False, w=None, smooth_k=0, degree=3, alpha=1.):
     ''' Computes a smoothing B-spline for a sequence of points.
     Input:
@@ -1013,20 +1126,30 @@ def smoothing_spline(n, pts, der=0, ds=0., closed=False, w=None, smooth_k=0, deg
     degree, spline degree,
     alpha, parameterisation (1, uniform, 0.5 centripetal)
     '''
+    import polygonsoup.simplify as simplify
+
     if closed:
         pts = np.vstack([pts, pts[0]])
 
     if w is None:
         w = np.ones(pts.shape[0])
+    elif is_number(w):
+        w = np.ones(pts.shape[0])*w
 
     dim = pts.shape[1]
-    D = np.diff(pts, axis=0)
-    # chord lengths
-    s = np.sqrt(np.sum([D[:,i]**2 for i in range(dim)], axis=0))
-    I = np.where(s==0)
-    pts = np.delete(pts, I, axis=0)
-    s = np.delete(s, I)
-    w = np.delete(w, I)
+    # D = np.diff(pts, axis=0)
+    # # chord lengths
+    # s = np.sqrt(np.sum([D[:,i]**2 for i in range(dim)], axis=0))
+    # # I = np.where(s==0)
+    # # pts = np.delete(pts, I, axis=0)
+    # # s = np.delete(s, I)
+    # # w = np.delete(w, I)
+
+    # _, I = simplify.cleanup_contour(pts, closed=False, get_indices=True)
+    # pts = pts[I]
+    # #s = [s[i] for i in I]
+    # w = [w[i] for i in I]
+
 
     degree = min(degree, pts.shape[0]-1)
 
@@ -1036,7 +1159,7 @@ def smoothing_spline(n, pts, der=0, ds=0., closed=False, w=None, smooth_k=0, deg
 
     if ds != 0:
         D = np.diff(pts, axis=0)
-        s = np.sqrt(np.sum([D[:,i]**2 for i in range(dim)], axis=0))
+        s = np.sqrt(np.sum([D[:,i]**2 for i in range(dim)], axis=0))+1e-5
         l = np.sum(s)
         s = s**(alpha)
         u = np.cumsum(np.concatenate([[0.], s]))
@@ -1348,6 +1471,8 @@ def select_convex_vertex(P, area=None):
             if h > maxh:
                 maxh = h
                 verts.append(v)
+    if not verts:
+        return None
     return verts[-1]
 
 
@@ -1368,6 +1493,9 @@ def get_point_in_polygon(P, area=None):
     if area is None:
         area = polygon_area(P)
     v = select_convex_vertex(P, area)
+    if v is None:
+        print('Could not get convex vertex for polygon:' + str(P))
+        return centroid(P)
     a, b = (v-1)%n, (v+1)%n
     inside = []
     dist = np.inf
@@ -1387,7 +1515,7 @@ def get_point_in_polygon(P, area=None):
             n = len(Q)
             for i in range(n):
                 if is_point_in_triangle(Q[i], [P[a], P[v], P[b]]):
-                    d = distance(P[q], P[v])
+                    d = distance(Q[i], P[v]) #d = distance(P[q], P[v])
                     if d < dist:
                         dist = d
                         inside.append(Q[i])
@@ -1521,3 +1649,70 @@ if __name__=='__main__':
     #test_fit_shapes()
     #test_point_in_polygon()
     test_get_holes()
+
+def line_clip(p1, p2, rect): #xmin, ymax, xmax, ymin, x1, y1, x2, y2):
+    '''
+    Cohen Sutherland line clip (Foley et al. version)
+    '''
+    xmin, ymin = rect[0]
+    w, h = rect_size(rect)
+    xmax, ymax = rect[1]
+    #xmin, ymin, w, h = rect
+    #xmax, ymax = xmin + w, ymin + h
+
+    x0, x1 = p1[0], p2[0]
+    y0, y1 = p1[1], p2[1]
+
+    LEFT, RIGHT, BOTTOM, TOP = 1, 2, 4, 8
+
+    def out_code(x, y):
+        code = 0
+        if y < ymin:
+            code |= TOP
+        elif y > ymax:
+            code |= BOTTOM
+        if x < xmin:
+            code |= LEFT
+        elif x > xmax:
+            code |= RIGHT
+
+        return code
+
+    c0 = out_code(x0, y0)
+    c1 = out_code(x1, y1)
+
+    accept = False
+
+    while True:
+        if c0==0 and c1==0:
+            accept=True
+            break
+        elif (c0 & c1) != 0:
+            break
+
+        c = c0 if c0 else c1
+        m = (y1 - y0) / (x1 - x0)
+        if c & TOP:
+            x = x0 + (ymin - y0) / m
+            y = ymin
+        elif c & BOTTOM:
+            x = x0 + (ymax - y0) / m
+            y = ymax
+        elif c & LEFT:
+            y = y0 + m*(xmin - x0)
+            x = xmin
+        elif c & RIGHT:
+            y = y0 + m*(xmax - x0)
+            x = xmax
+
+        if c == c0:
+            x0, y0 = x, y
+            c0 = out_code(x0, y0)
+        else:
+            x1, y1 = x, y
+            c1 = out_code(x1, y1)
+
+    if accept:
+        return np.array([x0, y0]), np.array([x1, y1])
+    else:
+        return p1, p2 #None, None
