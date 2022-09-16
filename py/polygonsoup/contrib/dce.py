@@ -174,6 +174,7 @@ def dce(P, maxvalue, num=0, keep_end=1, closed=False, get_indices=False, keep=[]
 
     if closed:
         s = np.vstack([s, s[0]])
+        I.append(0)
 
     n = s.shape[0]
 
@@ -254,13 +255,16 @@ def dce(P, maxvalue, num=0, keep_end=1, closed=False, get_indices=False, keep=[]
         value[i0] = relevance(s, i0, peri, keep)
         value[i1] = relevance(s, i1, peri, keep)
 
+    if closed:
+        P = P[:-1]
+        s = s[:-1,:]
+        I = I[:-1]
+
     if get_flags:
         # Flags indicating wethere a vertex is removed
         flags = [1 if i in I else 0 for i in range(P.shape[0])]
         return flags
 
-    #if closed:
-    #    s = s[:-1,:]
     if get_indices:
         return s, I
     return s
