@@ -37,9 +37,9 @@ def conv_from(S):
     if type(S)==clip.PyPolyNode:
         contours = []
         polynode_contours(S, contours)
-        return [[np.array(p)/cfg.scale for p in P] for P in contours]
+        return [np.array([np.array(p)/cfg.scale for p in P]) for P in contours]
     else:
-        return [[np.array(p)/cfg.scale for p in P] for P in S]
+        return [np.array([np.array(p)/cfg.scale for p in P]) for P in S]
 
 def conv_to(S):
     return tuple([tuple([(int(x*cfg.scale),int(y*cfg.scale)) for x, y in P]) for P in S])
@@ -103,6 +103,7 @@ def op(op_type, A, B, a_closed=True, b_closed=True, clip_type='nonzero'):
 
 def intersection(A, B, a_closed=True, b_closed=True, clip_type='nonzero'):
     A = ensure_list(A)
+
     B = ensure_list(B)
     return op('intersection', A, B, a_closed, b_closed, clip_type)
 
@@ -129,3 +130,28 @@ def multi_union(shapes, clip_type='nonzero'):
     for B in shapes:
         A = union(A, B, clip_type=clip_type)
     return A
+
+def shapely_union( A, B ):
+    from shapely.geometry import LineString, MultiLineString, MultiPolygon, Point, Polygon
+    from shapely.validation import make_valid
+
+    def to_shapely(S):
+        polys = []
+        for P in S:
+            if len(P) > 2:
+                polys.append(Polygon([(p[0], p[1]) for p in P]))
+        return MultiPolygon(polys)
+
+    if not A:
+        return B
+    if not B:
+        return A
+
+    res = make_valid(to_shapely(A)).union(make_valid(to_shapely(B)))
+    if type(res)==Polygon:
+        res = [res]
+    S = []
+    for poly in res:
+        S += ([np.array([[x,y] for x, y in zip(*poly.exterior.xy)])] +
+            [[np.array([[x,y] for x, y in zip(*g.xy)])] for g in poly.interiors])
+    return S
