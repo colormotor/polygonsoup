@@ -203,3 +203,85 @@ def save_svg_polylines(S, file_path, closed=False):
     S = [geom.close(P) if c else P for P, c in zip(S, closed)]
     paths = [svg.Path(*[svg.Line(start=complex(*a), end=complex(*b)) for a, b in zip(P, P[1:])]) for P in S if len(P) > 1]
     svg.wsvg(paths, filename=file_path)
+
+
+try:
+    import drawSvg as dsvg
+
+    color_conv = {'k':'#000000',
+                  'w':'#ffffff',
+                  'c':'#00ffff'}
+
+    def to_hex(clr):
+        if isinstance(clr, str):
+            if clr in color_conv:
+                return color_conv[clr]
+            else:
+                if clr[0]=='#':
+                    return clr
+                return '#000000'
+        return '#%02x%02x%02x'%(int(clr[0]*255), int(clr[1]*255), int(clr[2]*255))
+
+    def svg_shape(path, S, closed=False):
+        if not isinstance(S, list):
+            S = [S]
+        for P in S:
+            if not len(P):
+                continue
+            path.M(*(P[0]))
+            for p in P[1:]:
+                path.L(*(p))
+            if closed:
+                path.L(*(P[0]))
+
+    class SvgDraw:
+        def __init__(self, rect, padding=0, background=None):
+
+            rect = geom.pad_rect(rect, -padding)
+            size = geom.rect_size(rect)
+            origin = rect[0]
+            center = geom.rect_center(rect)
+
+            self.drawing = dsvg.Drawing(*geom.rect_size(rect), origin=rect[0])
+            self.g = dsvg.Group(transform='translate(%f,%f) scale(1,-1) translate(%f,%f)'%(*(-center), *center))
+            self.drawing.append(self.g)
+
+            if background is not None:
+                self.fill_rect(rect, background)
+
+        def stroke(self, S, clr, closed=False, lw=1):
+            path = dsvg.Path(stroke=to_hex(clr), stroke_width=lw, fill='none')
+            svg_shape(path, S, closed)
+            self.g.append(path)
+
+        def fill(self, S, clr):
+            path = dsvg.Path(fill=to_hex(clr), stroke='none', fill_rule="evenodd")
+            svg_shape(path, S, closed=True)
+            self.g.append(path)
+
+        def fill_stroke(self, S, fill_clr, stroke_clr, lw=1):
+            path = dsvg.Path(fill=to_hex(fill_clr), stroke=to_hex(stroke_clr), stroke_width=lw, fill_rule="evenodd")
+            svg_shape(path, S, closed=True)
+            self.g.append(path)
+
+        def fill_rect(self, rect, clr):
+            P = np.array(geom.rect_corners(rect))
+            self.fill(P, clr)
+
+        def stroke_rect(self, rect, clr, lw=1):
+            P = np.array(geom.rect_corners(rect))
+            self.stroke(P, clr, closed=True, lw=lw)
+
+        def show(self, w=800):
+            self.drawing.setRenderSize(w=w)
+            return self.drawing
+            #return self.drawing.rasterize()
+
+        def save(self, fname):
+            if '.png' in fname:
+                self.drawing.savePng(fname)
+            else:
+                self.drawing.saveSvg(fname)
+
+except ModuleNotFoundError:
+    print('Could not find drawSvg module')
