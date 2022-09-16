@@ -199,3 +199,59 @@ class UnionFind:
         for item in iter(self.parents):
             sets[self.__getitem__(item)].append(item)
         return sets
+
+def marry( females, males, costf ):
+    """ one to one preference stable marriage
+        result is as big as number of females....
+    """
+    nmales = len(males)
+    nfemales = len(females)
+
+    engaged = [-1 for i in range(nfemales)]
+
+    if not males:
+        return engaged
+
+    if not females:
+        return engaged
+
+    costs = [ [costf(females[f], males[m])  for m in range(nmales)]
+                    for f in range(nfemales) ]
+
+    # current preference index for each male
+    preferredFemales = [ 0 for i in range(nmales) ]
+
+    # fill preferences
+    prefs = [   sorted( range(nfemales),
+                key = lambda f: costs[f][i] )
+                    for i in range(nmales)  ]
+
+    # single looking for some pussy...
+    singles = [ i for i in reversed(range(nmales)) ]
+
+    # marry!
+    while singles:
+        suitor = singles.pop()
+        f = preferredFemales[suitor];
+
+        # skip if there are no more options...
+        if f >= nfemales or suitor >= nmales:
+            continue
+
+        pref = prefs[suitor][f];
+        preferredFemales[suitor] += 1
+
+        if engaged[pref] == -1:
+            engaged[pref] = suitor;
+        else:
+            cur = engaged[pref];
+            if costs[pref][suitor] < costs[pref][cur]:
+                # suitor is better, dump current and set new couple
+                singles.append(cur)
+                engaged[pref] = suitor
+            else:
+                # no luck, keep on trying
+                singles.append(suitor)
+
+
+    return engaged
