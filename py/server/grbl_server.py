@@ -47,7 +47,7 @@ args.add_argument('--oy', type=float, default=300, help='Origin y (mm)')
 # args.add_argument('--pd', type=float, default=-47,
 #                  help='''Pen down distance (lower value is lower)''')
 
-args.add_argument('--pd', type=float, default=-45,
+args.add_argument('--pd', type=float, default=-45, #-45,
                  help='''Pen up distance (lower value is lower)''')
 args.add_argument('--pu', type=float, default=-35,
                  help='''Pen down distance (lower value is lower)''')
@@ -72,6 +72,40 @@ def wait_for_response(s, name='', timeout=30):
             break
     print('response time out')
 
+import sys, select
+
+class KeyListener(threading.Thread):
+    def __init__(self):
+        threading.Thread.__init__(self)
+        self.key = '' #None
+        self.alive = True
+
+    def pressed(self, c):
+        if not self.key:
+            return False
+
+        if self.key[0] == 'p' or self.key[0] == ' ': #ord(c):
+            self.key = ''
+            return True
+        return False
+
+    def run(self):
+        while self.alive:
+            put = select.select([sys.stdin], [], [], 1)[0]
+            if put:
+                self.key = sys.stdin.readline().rstrip()
+                print('Pressed: ' + self.key)
+            # dr,dw,de = select.select([sys.stdin], [], [], 0)
+
+            # c = sys.stdin.read()
+            # return dr != []
+            # self.pressed = stdscr.getch()
+            time.sleep(0.1)
+        print('endend key')
+
+key = KeyListener()
+key.start()
+
 class GrblDevice(threading.Thread):
     def __init__(self):
         self.devices = ['/dev/tty.usbserial-10',
@@ -84,6 +118,12 @@ class GrblDevice(threading.Thread):
         self.chunks = []
         self.s = None
         self.cmd_count = 0
+        self.paused = False
+
+    def test_pause(self):
+        if key.pressed(' '):
+            self.paused = not device.paused
+            print('Device pause: ' + str(int(self.paused)))
 
     def run(self):
         no_osc = False
@@ -115,9 +155,17 @@ class GrblDevice(threading.Thread):
         while self.alive:
             # time.sleep(0.2)
             # continue
+            self.test_pause()
+            if self.paused:
+                time.sleep(0.1)
+                continue
 
             while self.chunks:
                 time.sleep(1.0/30)
+                self.test_pause()
+                if self.paused:
+                    continue
+
                 lock.acquire()
                 lines = self.chunks[0]
                 # print('Lines: ')
@@ -128,13 +176,16 @@ class GrblDevice(threading.Thread):
                 c_line = []
                 error_count = 0
                 for line in lines:
+                    while self.paused:
+                        time.sleep(0.5)
+
                     # time.sleep(10.0/1000)
                     l_block = line.strip()
                     if not l_block.isspace() and len(l_block) > 0:
                         s.write((l_block + '\n').encode()) # Send block to grbl
                         self.cmd_count += 1
                         res = s.readline()
-                        print(res)
+                        #print(res)
 
                 print('next chunk')
                 print('cmd count %d'%self.cmd_count)
@@ -197,6 +248,7 @@ class GrblDevice(threading.Thread):
         self.chunks[-1].append(f'G0 Z{cfg.pu}')
         if newchunk:
             lock.release()
+
     def pen_down(self, newchunk=True):
         if newchunk:
             lock.acquire()
@@ -207,10 +259,10 @@ class GrblDevice(threading.Thread):
 
     def draw_path(self, P, newchunk=True):
         def pointstr(p):
-            if len(p) == 2:
-                return 'X%.2f Y%.2f'%(p[0], p[1])
-            else:
-                return 'X%.2f Y%.2f Z%.2f'%(p[0], p[1], p[2])
+            #if len(p) == 2:
+            return 'X%.2f Y%.2f'%(p[0], p[1])
+            #else:
+            #    return 'X%.2f Y%.2f Z%.2f'%(p[0], p[1], p[2])
 
 
         if newchunk:
@@ -244,7 +296,10 @@ class GrblDevice(threading.Thread):
         self.cmd_count = 0
         c = 0
         for P in paths:
-            c += self.draw_path(P, False)
+            if type(P) == str:
+                self.command(P, False)
+            else:
+                c += self.draw_path(P, False)
         lock.release()
         print('Desired cmd count: %d'%c)
 
@@ -265,11 +320,13 @@ class GrblDevice(threading.Thread):
         #self.chunks[-1].append('G92 X0 Y0 Z0')
         lock.release()
 
-    def command(self, cmd):
-        lock.acquire()
-        self.chunks.append([])
+    def command(self, cmd, lock=True):
+        if lock:
+            lock.acquire()
+            self.chunks.append([])
         self.chunks[-1].append(cmd)
-        lock.release()
+        if lock:
+            lock.release()
 
 device = GrblDevice()
 device.start()
@@ -400,10 +457,15 @@ def stroke_end():
     global curpath
     paths.append(np.array(curpath))
 
+
 def drawing_start():
     print("DRAWING START")
     global paths
     paths = []
+
+def drawing_add_cmd(cmd):
+    global paths
+    paths.append(cmd)
 
 # DB: Note, addition here. We want to be able to draw with specific coordinates (in inches)
 # which can be done by using the "drawing_end_raw" command
@@ -416,16 +478,16 @@ def drawing_end(raw=False):
         mat = np.eye(3)
         if cfg.y_up:
             mat = geom.scaling_2d([1,-1])
-
-        S = geom.affine_transform(mat, [np.array(P) for P in paths])
-        src_rect = geom.bounding_box(S)
+        S = [np.array(P) if type(P) != str else P for P in paths]
+        S = [geom.affine_transform(mat, P) if type(P) != str else P for P in S]
+        src_rect = geom.bounding_box([P for P in S if type(P) != str])
         dst_rect = geom.make_rect(cfg.ox + POSX*CELLSIZEX, cfg.oy + POSY*CELLSIZEY, CELLSIZEX, CELLSIZEY)
         mat = geom.rect_in_rect_transform(src_rect, dst_rect, PADDING)
-        S = geom.affine_transform(mat, S)
+        S = [geom.affine_transform(mat, P) if type(P) != str else P for P in S]
         nextpos()
     else:
-        S = [np.array(P) for P in paths]
-        print(S)
+        S = [np.array(P) if type(P) != str else P for P in paths]
+        #print(S)
     # if title:
     #     font = axi.Font(axi.FUTURAL, 7.5) #
     #     dtext = font.text(title)
@@ -486,6 +548,8 @@ def pathcmd(*ary):
         print('received home')
     elif ary[1] == 'title':
         set_title(' '.join(ary[2:]))
+    elif ary[1] == 'cmd':
+        drawing_add_cmd(' '.join(ary[2:]))
     else:
         print("strange PATHCMD: " + ary[1])
         # if ary[1][0] == '$':
@@ -498,6 +562,9 @@ print('Grbl server, binding socket to port %d'%(cfg.port))
 sock.bind(('', cfg.port))  # CHANGE PORT NUMBER HERE!
 sock.listen(5)
 
+#import curses
+#stdscr = curses.initscr()
+
 try:
     while True:
         connection,address = sock.accept()
@@ -505,6 +572,7 @@ try:
         #print("got connection")
         sofar = "";
         while True:
+
             buf = recv(connection)
             if buf is None: break
             source = ""
@@ -527,13 +595,20 @@ try:
             # print(ary)
             # print(ary[0])
             if ary[0] == "PATHCMD":
+                #print(ary)
                 pathcmd(*ary)
             elif ary[0] == 'wait':
                 device.wait()
                 resp = 'done\n'.encode('utf-8')
                 connection.send(resp)
             else:
-                response = device.command(*ary)
+                cmd = ' '.join(ary)
+                if cmd == 'sleep':
+                    #print('sleeping half sec')
+                    time.sleep(0.5)
+                else:
+                    print('executing command: ' + cmd)
+                    response = device.command(cmd)
                 #print("device response: " + response)
                 # response += "\n"
                 # response = response.encode('utf-8')
@@ -547,4 +622,9 @@ except KeyboardInterrupt:
 device.alive = False
 time.sleep(1)
 device.join()
+
+key.alive = False
+time.sleep(0.5)
+key.join()
+
 print('end')
