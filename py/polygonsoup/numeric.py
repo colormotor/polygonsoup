@@ -67,6 +67,8 @@ def dtw(x, y, w = np.inf, get_dist = False, distfn = lambda a, b: np.dot(b-a, b-
 
         p.append([i, j])
 
+    # if max(nx, ny) > len(p):
+    #     raise ValueError
     return p[::-1]
 
 
