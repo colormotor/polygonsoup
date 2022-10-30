@@ -49,7 +49,7 @@ paper_sizes = {
     'A5': (8.3, 5.8)
 }
 
-def set_theme(style=cfg.default_style, fontsize=6):
+def set_theme(style=cfg.default_style, fontsize=7):
     if style:
         # https://towardsdatascience.com/a-new-plot-theme-for-matplotlib-gadfly-2cffc745ff84
         # Place `gadfly.mplstyle` in `~/.matplotlib/stylelib`
@@ -75,15 +75,15 @@ def set_theme(style=cfg.default_style, fontsize=6):
     'lines.markeredgewidth':0.25,
     'axes.labelsize': fontsize,
     'axes.facecolor': (1.,1.,1.,1),
-    'xtick.major.pad':0.0,
-    'ytick.major.pad':0.0,
+    'xtick.major.pad':10.0,
+    'ytick.major.pad':10.0,
     'figure.facecolor': (1.,1.,1.,1),
     'savefig.facecolor': (1.,1.,1.,1),
     'legend.fontsize': 4,
-    'xtick.labelsize': fontsize*0.9,
-    'ytick.labelsize': fontsize*0.9,
-    'xtick.color': '333333',
-    'ytick.color': '333333',
+    'xtick.labelsize': fontsize*1.1, #*0.9,
+    'ytick.labelsize': fontsize*1.1, #*0.9,
+    'xtick.color': '666666',
+    'ytick.color': '666666',
     'axes.edgecolor' : '666666',
     'axes.grid': True,
     'grid.color': 'cccccc',
@@ -219,6 +219,63 @@ def draw_arrow(a, b, clr, alpha=1., head_width=0.5, head_length=None, overhang=0
               head_width=head_width, head_length=head_length, length_includes_head=True,
               fc=clr, ec='none', zorder=zorder)
 
+def arc_points(a, b, theta, subd=100):
+    ''' Get points of an arc between a and b,
+        with internal angle theta'''
+
+    a = np.array(a)
+    b = np.array(b)
+    mp = a + (b-a)*0.5
+
+    if abs(theta) < 1e-9:
+        theta = 1e-9
+
+    d = a-b #b-a
+    l = np.linalg.norm(d)
+    r = l / (np.sin(theta/2)*2)
+
+    h = (1-np.cos(theta/2))*r
+    h2 = r-h
+    p = np.dot([[0,-1],[1, 0]], d)
+    pl = np.linalg.norm(p)
+    if pl > 1e-10:
+        p = p / np.linalg.norm(p)
+
+    cenp = mp-p*h2
+    theta_start = np.arctan2(p[1], p[0])
+    A = np.linspace(theta_start-theta/2, theta_start+theta/2, subd)
+    arc = np.tile(cenp.reshape(-1,1), (1,subd)) + np.vstack([np.cos(A), np.sin(A)]) * r
+    return arc.T
+
+def draw_arc_arrow(a, b, angle, clr, alpha=1., head_width=0.25, head_length=None, overhang=0.3, zorder=None, **kwargs):
+    if head_length is None:
+        head_length = head_width
+
+    linewidth = 1.0
+    if 'lw' in kwargs:
+        linewidth = kwargs['lw']
+    if 'linewidth' in kwargs:
+        linewidth = kwargs['linewidth']
+
+    # Uglyness, still does not work
+    axis = plt.gca()
+    trans = axis.transData.inverted()
+    scale = np.sqrt(det22(trans.get_matrix()))*axis.figure.dpi*100
+    head_width = (linewidth*head_width)*scale
+    head_length = (linewidth*head_length)*scale
+    a, b  = np.array(a), np.array(b)
+    d = b - a
+
+    arc_pts = arc_points(a, b, geom.radians(angle))
+    d = arc_pts[-1] - arc_pts[-2]
+    stroke(arc_pts, clr, lw=linewidth)
+
+    #draw_line(a, b - geom.normalize(d)*head_length*0.5, clr, linewidth=linewidth)
+    plt.arrow(b[0], b[1], d[0], d[1], lw=0.5, overhang=overhang,
+              head_width=head_width, head_length=head_length, length_includes_head=True,
+              fc=clr, ec='none', zorder=zorder)
+
+
 def set_axis_limits(box, pad=0, invert=True, ax=None, y_limits_only=False):
     # UNUSED
     if ax is None:
@@ -286,6 +343,20 @@ def figure(size="A5", plotter=NoPlotter(), figscale=1):
     cfg.plotter = plotter
     plotter._set_bounds(w, h)
     return fig
+
+def show_shape(S, clr='k', figsize=(5,5), axis=False, box=None, **kwargs):
+    if type(S) != list:
+        S = [S]
+    figure(figsize)
+    stroke(S, clr, **kwargs)
+    show(axis=axis, box=box)
+
+def show_plot(vals, clr='k', figsize=(5,5), **kwargs):
+    figure(figsize)
+    for y in vals:
+        plt.plot(y, **kwargs)
+    plt.show()
+
 
 def show(title='', padding=0, box=None, axis=False, ydown=True, file='', debug_box=False):
     if title:
