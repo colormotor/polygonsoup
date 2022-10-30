@@ -11,6 +11,7 @@ numeric - numpy-based utilities
 '''
 
 import numpy as np
+from scipy.ndimage.filters import gaussian_filter1d
 
 def randspace(a, b, n, minstep=0.1, maxstep=0.6):
     ''' Generate a sequence from a to b with random steps
@@ -77,3 +78,42 @@ def dtw_path(x, y, w = np.inf):
 
 def dtw_dist(x, y, w = np.inf):
   return mth.dtw(x, y, w, True)
+
+def gaussian_smooth(X, sigma, mode='reflect'):
+    #mode = 'reflect'
+    return gaussian_filter1d(X, sigma=sigma, mode=mode)
+
+def smooth_diff(X, sigma, order=1):
+    return gaussian_filter1d(X, sigma, order=order)
+
+# def maxima(X, diffSigma, thresh, eps, offsetThresh):
+#     if diffSigma > 0:
+#         D = smooth_diff(X, diffSigma);
+#     else:
+#         D = np.diff(X);
+#     MM = []
+#     ind = 0
+
+#     THR = lambda a, b: (np.abs(a) + np.abs(b)) > eps
+#     #define THR(a, b) ((fabs(a) + fabs(b)) > eps)
+
+#     c = 0
+#     for i in range(len(D) - 1):
+#         ind += 1
+#         d1  = D[i]
+#         d2 = D[i + 1]
+#         thr = (np.abs(d1) + np.abs(d2))
+#         xx = X[i]
+
+#         if (d1 > 0.0 and d2 < 0.0):
+#             if (THR(d1, d2) and X[i] > thresh):
+
+#                 c = 0
+#                 MM.append(ind)
+#       }
+#     }
+#     c++;
+#   }
+
+#   return MM;
+# }
