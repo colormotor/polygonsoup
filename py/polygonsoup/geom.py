@@ -37,6 +37,9 @@ def is_polyline(P):
         return True
     return False
 
+def direction(angle):
+    return np.array([np.cos(angle), np.sin(angle)])
+
 def close_path(P):
     if type(P) == list:
         return P + [P[0]]
@@ -126,8 +129,10 @@ def turning_angles(P, closed=False, all_points=False, N=None):
 
 def normals_2d(P, closed=0, vertex=False):
     ''' 2d normals (fixme)'''
+    # pdb.set_trace()
     if closed:
-        P = np.vstack([P[-1], P, P[0]])
+        # P = np.vstack([P[-1], P, P[0]])
+        P = np.vstack([P, P[0]])
 
     D = np.diff(P, axis=0)
     if vertex and D.shape[0] > 1:
@@ -140,8 +145,8 @@ def normals_2d(P, closed=0, vertex=False):
         N = np.dot([[0,1],[-1, 0]], T.T).T
         if not closed:
             N = np.vstack([N, N[-1]])
-        else:
-            N = N[:-1]
+        # else:
+        #    N = N[:-1]
     return normc(N)
 
 def point_line_distance(p, a, b):
@@ -262,8 +267,6 @@ def intersect_lines_lsq(lines, l=0, reg_point=None):
     ins = np.dot(np.linalg.pinv(R + np.eye(2)*l), q + l*s)
     return ins
 
-def centroid(P):
-    return np.mean(P, axis=0)
 
 # Rect utilities
 def bounding_box(S, padding=0):
@@ -761,7 +764,7 @@ class shapes:
                                 vec(max[0], max[1], max[2]),
                                 vec(min[0], max[1], max[2])))
         for i in range(4):
-            S.append([S[0][i], S[1][i]])
+            S.append(np.array([S[0][i], S[1][i]]))
         # line segments only
         # S.append([vec(min[0], min[1], min[2]),  vec(max[0], min[1], min[2])])
         # S.append([vec(max[0], min[1], min[2]),  vec(max[0], max[1], min[2])])
@@ -790,6 +793,23 @@ class shapes:
         ''' A closed polygon (joins last point to first)'''
         P = [np.array(p) for p in args]
         P.append(np.array(args[0]))
+        return np.array(P)
+
+    @staticmethod
+    def circle(center, r, subd=80):
+        return close_path(np.array([vec(np.cos(th), np.sin(th))*r + center
+                                    for th in np.linspace(0, np.pi*2, subd)[:-1]]))
+
+    @staticmethod
+    def star(radius, ratio_inner=1.0, n=5, center=[0,0]):
+        n = int(max(n, 3))
+        th = np.linspace(0, np.pi*2, n*2+1)[:-1] - np.pi / (n*2)
+        R = [radius, radius/(1.618033988749895+1)*ratio_inner]
+        P = []
+        for i, t in enumerate(th): #[::-1]):
+            r = R[i%2]
+            P.append(direction(t)*r + center)
+        P = np.array(P)
         return P
 
     @staticmethod
@@ -1232,11 +1252,26 @@ def polygon_area(P):
         return 0
     n = P.shape[0]
     area = 0.0
+    P = P - np.mean(P, axis=0)
     for i in range(n):
-        p0 = i
-        p1 = (i+1)%n
-        area += P[p0,0] * P[p1,1] - P[p1,0] * P[p0,1]
-    return area * 0.5
+        j = (i+1)%n
+        area += 0.5 * (P[i,1]+P[j,1]) * (P[i,0]-P[j,0]) # trapezoid https://en.wikipedia.org/wiki/Shoelace_formula
+        # The triangle version will run into numerical percision errors
+        # if we have a small or thin polygon that is quite off center,
+        # this can be solved by centering the polygon before comp. Maybe useful to do anyhow?
+        #area += 0.5*(P[i,0] * P[j,1] - P[j,0] * P[i,1])
+
+    return area
+
+def polygon_area_tri(P):
+    if len(P.shape) < 2 or P.shape[0] < 3:
+        return 0
+    n = P.shape[0]
+    area = 0.0
+    for i in range(n):
+        j = (i+1)%n
+        area += 0.5*(P[i,0] * P[j,1] - P[j,0] * P[i,1]) # Seems to be less precise for small numbers?
+    return area
 
 def triangle_area( a, b, c ):
     da = a-b
@@ -1494,8 +1529,11 @@ def get_point_in_polygon(P, area=None):
         area = polygon_area(P)
     v = select_convex_vertex(P, area)
     if v is None:
-        print('Could not get convex vertex for polygon:' + str(P))
-        return centroid(P)
+        #import pdb
+        #pdb.set_trace()
+        print('Could not find convex vertex for area %f'%area)
+        return np.mean(P, axis=0)
+
     a, b = (v-1)%n, (v+1)%n
     inside = []
     dist = np.inf
