@@ -92,6 +92,7 @@ def spline_to_bezier(tck):
     points, and the endpoint, where each point is of d dimensions."""
     t, c, k = tck
     old_t = np.array(t)
+    dim = len(c)
     # the first and last k+1 knots are identical in the non-periodic case, so
     # no need to consider them when increasing the knot multiplicities below
     knots_to_consider = np.unique(t[k+1:-k-1])
@@ -107,8 +108,8 @@ def spline_to_bezier(tck):
             # add enough knots to bring the current multiplicity up to the desired multiplicity
             number_to_insert = desired_multiplicity - remainder
             t, c, k = insert(x, (t, c, k), m=number_to_insert)
-            c[0] = c[0][:-k-1] # Need to look into why this is necessary
-            c[1] = c[1][:-k-1]
+            for i in range(dim):
+                c[i] = c[i][:-k-1] # Need to look into why this is necessary
 
     # group the points into the desired bezier curves
     c = np.array(c).T
