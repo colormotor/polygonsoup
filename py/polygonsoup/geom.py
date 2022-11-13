@@ -24,7 +24,7 @@ def is_number(x):
 def is_compound(S):
     '''Returns True if S is a compound polyline,
     a polyline is represented as a list of points, or a numpy array with as many rows as points'''
-    if type(S[0])==list:
+    if type(S) == list: #[0])==list:
         return True
     if type(S[0])==np.ndarray and len(S[0].shape) > 1:
         return True
@@ -1529,10 +1529,11 @@ def get_point_in_polygon(P, area=None):
         area = polygon_area(P)
     v = select_convex_vertex(P, area)
     if v is None:
-        #import pdb
-        #pdb.set_trace()
-        print('Could not find convex vertex for area %f'%area)
-        return np.mean(P, axis=0)
+        # from polygonsoup import plut
+        # import pdb
+        # pdb.set_trace()
+        #print('Could not find convex vertex for area %f'%area)
+        return None # np.mean(P, axis=0)
 
     a, b = (v-1)%n, (v+1)%n
     inside = []
