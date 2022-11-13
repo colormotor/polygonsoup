@@ -35,7 +35,7 @@ class Turtle(object):
         paths = list(self._paths)
         if len(self._path) > 1:
             paths.append(self._path)
-        return paths
+        return [np.array(P) for P in paths]
 
     def pd(self):
         self.pen = True
