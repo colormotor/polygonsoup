@@ -152,5 +152,5 @@ def hatch(S, dist, angle=0., flip_horizontal=False, get_hole_count=False, max_co
     if scanlines:
         scanlines = affine_transform(mat.T, scanlines) #np.array(scanlines))
         # make list of hatch segments
-        scanlines = [[a, b] for a, b in zip(scanlines[0::2], scanlines[1::2])]
+        scanlines = [np.array([a, b]) for a, b in zip(scanlines[0::2], scanlines[1::2])]
     return scanlines
