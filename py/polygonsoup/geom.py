@@ -24,7 +24,13 @@ def is_number(x):
 def is_compound(S):
     '''Returns True if S is a compound polyline,
     a polyline is represented as a list of points, or a numpy array with as many rows as points'''
+    if type(S) != list:
+        return False
     if type(S) == list: #[0])==list:
+    #     if not S:
+    #         return True
+    #     if type(S[0])==np.ndarray:
+    #         return True
         return True
     if type(S[0])==np.ndarray and len(S[0].shape) > 1:
         return True
@@ -743,8 +749,8 @@ def view_3d(polyline, modelview, projection, viewport=[vec(-1,-1), (1,1)], clip=
     #pdb.set_trace()
     if get_normalized_coords:
         Z = [[p[:3]/p[3] for p in seg] for seg in Pc]
-        return Pv, Z
-    return Pv
+        return [np.array(P) for P in Pv], Z
+    return [np.array(P) for P in Pv]
 
 # Generates shapes (as polylines, 2d and 3d)
 class shapes:
