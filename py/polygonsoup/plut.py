@@ -79,7 +79,7 @@ def set_theme(style=cfg.default_style, fontsize=7):
     'ytick.major.pad':10.0,
     'figure.facecolor': (1.,1.,1.,1),
     'savefig.facecolor': (1.,1.,1.,1),
-    'legend.fontsize': 4,
+    'legend.fontsize': fontsize*1.2,
     'xtick.labelsize': fontsize*1.1, #*0.9,
     'ytick.labelsize': fontsize*1.1, #*0.9,
     'xtick.color': '666666',
@@ -115,6 +115,10 @@ def stroke(S, clr='k', closed=False, **kwargs):
 
     cfg.plotter._stroke(P)
     P = np.array(P).T
+
+    if len(P.shape) < 2:
+        return
+
     plt.plot(P[0], P[1], color=mpl.colors.to_rgb(clr), **kwargs)
 
 def fill(S, clr, **kwargs):
