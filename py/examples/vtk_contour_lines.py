@@ -20,9 +20,11 @@ import polygonsoup.clipper as clip
 
 import polygonsoup.vtk_utils as vtku
 
+reload(geom)
+
 model, pos, name = vtku.load_model('teapot.obj'), vec(0, -0.7, -14.5), 'Teapot'
 # model, pos, name = vtku.load_model('stanford-bunny.obj'), vec(0, -0.08, -0.55), 'Bunny'
-contours = vtku.contour_lines(model, [0,1,0], 60)
+contours = [np.array(P) for P in vtku.contour_lines(model, [0,1,0], 60)]
 
 # Viewport rect
 viewport = make_rect(0, 0, 400, 400)
@@ -49,7 +51,7 @@ contours_v = [geom.smoothing_spline(0, np.array(P), ds=0.5, degree=2) for P in c
 #             p0, p1 = Q[0], Q[-1]
 
         
-clip_contours = True
+clip_contours = False
 if clip_contours:
     # Hacky clipping procedure
     # It assumes contour lines are generated for Y axis, and a viewing angle from the top

@@ -18,7 +18,7 @@ from polygonsoup.geom import (vec,
 # Create a couple of cubes and a hexagon at the base
 S = []
 S = shapes.cuboid([0, 0, 0], 0.5) + shapes.cuboid([0, 0.5+0.25, 0], 0.25)
-hexagon = [vec(np.cos(th)*1.5, -0.5, np.sin(th)*1.5) for th in np.linspace(0, np.pi*2, 7)]
+hexagon = np.array([vec(np.cos(th)*1.5, -0.5, np.sin(th)*1.5) for th in np.linspace(0, np.pi*2, 7)])
 S.append(hexagon)
 
 np.random.seed(10)
