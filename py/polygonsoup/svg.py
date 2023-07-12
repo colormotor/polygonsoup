@@ -206,8 +206,8 @@ def save_svg_polylines(S, file_path, closed=False):
 
 
 try:
-    import drawSvg as dsvg
-
+    #import drawSvg as dsvg
+    import drawsvg as dsvg
     color_conv = {'k':'#000000',
                   'w':'#ffffff',
                   'c':'#00ffff'}
@@ -278,10 +278,11 @@ try:
             #return self.drawing.rasterize()
 
         def save(self, fname):
+            print('saving ' + fname)
             if '.png' in fname:
-                self.drawing.savePng(fname)
+                self.drawing.save_png(fname)
             else:
-                self.drawing.saveSvg(fname)
+                self.drawing.save_svg(fname)
 
 except ModuleNotFoundError:
     print('Could not find drawSvg module')

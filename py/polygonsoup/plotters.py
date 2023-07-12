@@ -32,6 +32,13 @@ from polygonsoup.plut import NoPlotter
 #     def _plot(self, title='', padding=0, box=None):
 #         pass
 
+def sort_paths(S):
+    import axi
+    S = [[tuple(p) for p in path] for path in paths]
+    sorted_paths = axi.sort_paths(S, reversable = True)
+    sorted_paths = [np.array(path) for path in sorted_paths]
+    return sorted_paths
+
 class AxiPlotter:
     ''' Direct connection to axi module'''
     def __init__(self, sort=False):

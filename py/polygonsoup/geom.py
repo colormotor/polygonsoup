@@ -283,8 +283,8 @@ def bounding_box(S, padding=0):
     if not S:
         return np.array([0, 0]), np.array([0, 0])
 
-    bmin = np.min([np.min(V, axis=0) for V in S ], axis=0)
-    bmax = np.max([np.max(V, axis=0) for V in S ], axis=0)
+    bmin = np.min([np.min(V, axis=0) for V in S if len(V)], axis=0)
+    bmax = np.max([np.max(V, axis=0) for V in S if len(V)], axis=0)
     return [bmin - padding, bmax + padding]
 
 def rect_w(rect):
@@ -424,6 +424,11 @@ def rect_in_rect_transform(src, dst, padding=0., axis=None):
     M = np.dot(M, scaling_2d(rect_size(fitted)/rect_size(src)))
     M = np.dot(M, trans_2d(-cenp_src))
     return M
+
+def transform_to_rect(shape, rect, padding=0., axis=None):
+    ''' transform a shape or polyline to dest rect'''
+    src_rect = bounding_box(shape)
+    return affine_transform(rect_in_rect_transform(src_rect, rect, padding, axis), shape)
 
 def rect_grid(rect, nrows, ncols, margin=0, padding=0, flatten=True):
     rect = pad_rect(rect, margin)
@@ -632,6 +637,8 @@ def affine_transform(mat, data):
 def affine_mul(mat, data):
     print('Use affine_transform instead')
     return affine_transform(mat, data) # For backwards compat
+
+tsm = affine_transform
 
 def clip_3d(p, q):
     ''' Liang-Barsky homogeneous line clipping to canonical view volume '''
@@ -915,11 +922,13 @@ def compute_planar_map(polylines, progress=iter_pass):
         for a, b in zip(P, P[1:]):
             segs.append((a,b))
     for a, b in progress(segs, 'comuting planar arrangement'):
-    # for P in polylines:
-    # for a, b in zip(P, P[1:]):
-        if distance_sq(a, b) > 1e-20:
-            arr.insert(skgeom.Segment2(skgeom.Point2(*a),
+        try:
+            if distance_sq(a, b) > 1e-20:
+                arr.insert(skgeom.Segment2(skgeom.Point2(*a),
                                     skgeom.Point2(*b)))
+        except RuntimeError as e:
+            print(e)
+            print('---- Error adding segment ')
         #else:
         #    print(geom.distance_sq(a, b))
         # except Exception as e:
@@ -940,9 +949,14 @@ def compute_planar_map_indexed(polylines, progress=iter_pass):
     for a, b in progress(segs, 'comuting planar arrangement'):
     # for P in polylines:
     # for a, b in zip(P, P[1:]):
-        if distance_sq(a, b) > 1e-20:
-            arr.insert(skgeom.Segment2(skgeom.Point2(*a),
-                                       skgeom.Point2(*b)), i)
+        try:
+            if distance_sq(a, b) > 1e-20:
+                arr.insert(skgeom.Segment2(skgeom.Point2(*a),
+                                        skgeom.Point2(*b)), i)
+
+        except RuntimeError as e:
+            #print(e)
+            print('---- Error adding segment ')
         i += 1
         #else:
         #    print(geom.distance_sq(a, b))
@@ -1322,10 +1336,14 @@ def is_point_in_poly(p, P):
    
 def is_point_in_shape(p, S, get_flags=False):
     ''' Even odd point in shape'''
+    if p is None:
+        return False
     c = 0
     flags = []
     for P in S:
-        if is_point_in_poly(p, P):
+        if len(P) < 3:
+            flags.append(False)
+        elif is_point_in_poly(p, P):
             flags.append(True)
             c = c+1
         else:
@@ -1570,12 +1588,17 @@ def get_point_in_polygon(P, area=None):
     return (inside[-1] + P[v])/2
 
 
-def get_holes(S, get_points_and_areas=False):
+def get_holes(S, get_points_and_areas=False, verbose=False):
     '''Return an array with same size as S with 0 not a hole an 1 a hole
     Optionally return positions in sub-contours and their areas'''
     areas = [polygon_area(P) for P in S]
-    points = [get_point_in_polygon((S, i), area) for i, area in enumerate(areas)]
-    holes = [True if not is_point_in_shape(points[i], S) else False  for i, P in enumerate(S)]
+    if verbose:
+        from tqdm import tqdm
+    else:
+        tqdm = lambda v: list(v)
+
+    points = [get_point_in_polygon((S, i), area) for i, area in enumerate(tqdm(areas))]
+    holes = [True if not is_point_in_shape(points[i], S) else False  for i, P in enumerate(tqdm(S))]
     if get_points_and_areas:
         return holes, points, areas
     return holes

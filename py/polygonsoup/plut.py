@@ -49,6 +49,8 @@ paper_sizes = {
     'A5': (8.3, 5.8)
 }
 
+cfg.plotter = NoPlotter()
+
 def set_theme(style=cfg.default_style, fontsize=7):
     if style:
         # https://towardsdatascience.com/a-new-plot-theme-for-matplotlib-gadfly-2cffc745ff84
@@ -140,7 +142,8 @@ def fill(S, clr, **kwargs):
             continue
         path += [p for p in P] + [P[0]]
         cmds += [Path.MOVETO] + [Path.LINETO for p in P[:-1]] + [Path.CLOSEPOLY]
-    plt.gca().add_patch(PathPatch(Path(path, cmds), color=clr, fill=True, linewidth=0, **kwargs))
+    if path:
+        plt.gca().add_patch(PathPatch(Path(path, cmds), color=clr, fill=True, linewidth=0, **kwargs))
 
 def fill_stroke(S, clr, strokeclr, **kwargs):
     if not S:
@@ -180,6 +183,14 @@ def fill_rect(rect, clr, **kwargs):
 def fill_circle(pos, radius, clr, **kwargs):
     plt.gca().add_patch(
         patches.Circle(pos, radius, fill=True, facecolor=clr, **kwargs)) #alpha=alpha, zorder=zorder))
+
+def stroke_circle(pos, radius, clr, **kwargs):
+    plt.gca().add_patch(
+        patches.Circle(pos, radius, fill=False, edgecolor=clr, **kwargs)) #alpha=alpha, zorder=zorder))
+
+def fill_stroke_circle(pos, radius, clr, strokeclr, **kwargs):
+    plt.gca().add_patch(
+        patches.Circle(pos, radius, fill=True, facecolor=clr, edgecolor=strokeclr, **kwargs)) #alpha=alpha, zorder=zorder))
 
 def stroke_circle(pos, radius, clr, **kwargs):
     plt.gca().add_patch(
@@ -369,7 +380,7 @@ def show(title='', padding=0, box=None, axis=False, ydown=True, file='', debug_b
     setup(ydown, axis, box, debug_box)
 
     if file:
-        plt.savefig(file, transparent=True)
+        plt.savefig(file, transparent=False)
 
     cfg.plotter._plot(title, padding, box=box)
     plt.show()

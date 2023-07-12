@@ -16,7 +16,7 @@ import sys
 import argparse
 args = argparse.ArgumentParser(description='Axidraw server')
 
-args.add_argument('--port', type=int, default=80,
+args.add_argument('--port', type=int, default=4000,
                  help='''Server port number''')
 args.add_argument('--nx', type=int, default=3,
                  help='''Number of horizontal subdivisions for test plots''')
@@ -32,11 +32,16 @@ args.add_argument('--start_index', type=int, default=0,
                  help='''Default start index''')
 args.add_argument('--format', type=str, default='none',
                  help='''Paper format (A4,A5,A3)''')
+args.add_argument('--plt', type=bool, default=False,
+                 help='''If True use matplotlib debug view instead''')
 
 cfg = args.parse_args()
 print(sys.argv)
 
-device = axi.Device()
+try:
+    device = axi.Device()
+except Exception as e:
+    print(e)
 
 # V3_SIZEX and V3_SIZEY
 # - this value is NOT the size of your paper
@@ -235,15 +240,17 @@ print('AxiDraw server, binding socket to port %d'%(cfg.port))
 sock.bind(('', cfg.port))  # CHANGE PORT NUMBER HERE!
 sock.listen(5)
 
+print('entering loop')
 
 while True:
     connection,address = sock.accept()
     sendit = lambda string: connection.send(string.encode("utf-8"))
-    #print("got connection")
+    print("got connection")
     sofar = "";
     while True:
         buf = recv(connection)
         if buf is None: break
+        print('received')
         source = ""
         if(buf == "\""):
             #print("starting some python code")
@@ -263,17 +270,19 @@ while True:
         #print("cmd ary:")
         print(ary)
         print(ary[0])
-        if ary[0] == "PATHCMD":
-            pathcmd(*ary)
-        elif ary[0] == 'wait':
-            device.wait()
-            resp = 'done\n'.encode('utf-8')
-            connection.send(resp)
-        else:
-            response = device.command(*ary)
-            print("device response: " + response)
-            response += "\n"
-            response = response.encode('utf-8')
-            connection.send(response)
+
+        if False:
+            if ary[0] == "PATHCMD":
+                pathcmd(*ary)
+            elif ary[0] == 'wait':
+                device.wait()
+                resp = 'done\n'.encode('utf-8')
+                connection.send(resp)
+            else:
+                response = device.command(*ary)
+                print("device response: " + response)
+                response += "\n"
+                response = response.encode('utf-8')
+                connection.send(response)
     #print("connection closed")
     connection.close()

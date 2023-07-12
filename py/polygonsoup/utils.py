@@ -145,16 +145,21 @@ def dirname(path):
     return os.path.dirname(path)
 
 class FileWatcher(object):
-    def __init__(self, path):
-        self._cached_stamp = 0
-        self.filename = path
+    def __init__(self, paths):
+        if type(paths) != list:
+            paths = [paths]
+        self._cached_stamps = [0 for _ in paths]
+        self.filenames = paths
 
     def modified(self):
-        stamp = os.stat(self.filename).st_mtime
-        if stamp != self._cached_stamp:
-            self._cached_stamp = stamp
-            return True
-        return False
+        res = False
+        for i, filename in enumerate(self.filenames):
+            stamp = os.stat(filename).st_mtime
+            if stamp != self._cached_stamps[i]:
+                self._cached_stamps[i] = stamp
+                res = True
+        return res
+
 
 
 def process_exists(proc_name):

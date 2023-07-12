@@ -14,6 +14,11 @@ import numpy as np
 
 from polygonsoup.contrib.dce import dce
 
+def cleanup_contour(X, eps = 1e-10, closed = False, get_indices=False):
+    distfn = lambda p, a, b: max(np.linalg.norm(p - a), np.linalg.norm(p - b))
+    return dp_simplify(X, eps, get_indices, closed, distfn);
+
+
 # RDP simplification (adapted from https://github.com/fhirschmann/rdp)
 def pldist(point, start, end):
     """
@@ -32,6 +37,26 @@ def pldist(point, start, end):
     return np.divide(
             np.abs(np.linalg.norm(np.cross(end - start, start - point))),
             np.linalg.norm(end - start))
+
+
+def dp_simplify(M, eps, get_indices=False, closed=False, dist=pldist):
+    ''' Ramer-Douglas-Peucker Simplification adapted from https://github.com/fhirschmann/rdp/'''
+    dist=pldist
+    if closed:
+        M = np.vstack([M, M[0]])
+
+    n = len(M)
+    mask = _rdp_iter(M, 0, n - 1, eps, dist)
+    I = [i for i in range(n) if mask[i]]
+
+    if closed:
+        M = M[:-1]
+        I = I[:-1]
+
+    if get_indices:
+        return M[I], I
+    return M[I]
+
 
 def rdp_rec(M, epsilon, dist=pldist):
     """
@@ -90,30 +115,6 @@ def _rdp_iter(M, start_index, last_index, epsilon, dist):
                 indices[i - global_start_index] = False
 
     return indices
-
-def cleanup_contour(X, eps = 1e-10, closed = False, get_indices=False):
-    distfn = lambda p, a, b: max(np.linalg.norm(p - a), np.linalg.norm(p - b))
-    return dp_simplify(X, eps, get_indices, closed, distfn);
-
-
-def dp_simplify(M, eps, get_indices=False, closed=False, dist=pldist):
-    ''' Ramer-Douglas-Peucker Simplification adapted from https://github.com/fhirschmann/rdp/'''
-    dist=pldist
-    if closed:
-        M = np.vstack([M, M[0]])
-
-    n = len(M)
-    mask = _rdp_iter(M, 0, n - 1, eps, dist)
-    I = [i for i in range(n) if mask[i]]
-
-    if closed:
-        M = M[:-1]
-        I = I[:-1]
-
-    if get_indices:
-        return M[I], I
-    return M[I]
-
 
 def vw_simplify(P, tol, closed=False, get_indices=False):
     """ Visvalingam-Whyatt simplification

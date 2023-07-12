@@ -197,3 +197,11 @@ def quantize_rotation_matrix(R, C, dtheta=0):
     R = np.array(R)
     R[:2, :2] = rot_2d(th)
     return R
+
+def quantize_vector(x, C, angle_offset):
+    if C == 0:
+        return x
+    dtheta = geom.radians(angle_offset + 90) # Needed to make it work with the way the angles are defined in schematization
+    th = np.arctan2(x[1], x[0])
+    th = quantize(th-dtheta, np.pi/(C)) + dtheta
+    return np.array([np.cos(th), np.sin(th)])*np.linalg.norm(x)

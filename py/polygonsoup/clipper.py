@@ -47,6 +47,10 @@ def conv_to(S):
 
 
 def offset(S, amt, join_type='miter', end_type='closed_polygon', miter=2):
+    ''' Offset one or more polylines.
+        join_type can be one of 'miter', 'square', 'round'
+        end_type can be one of 'closed_polygon' (default, closed), 'closed_line', 'open_round', 'open_square', 'open_butt'
+    '''
     join_types = {'round': clip.JT_ROUND,
                   'square': clip.JT_SQUARE,
                   'miter': clip.JT_MITER}
@@ -125,9 +129,9 @@ def difference(A, B, a_closed=True, b_closed=True, clip_type='nonzero'):
         return A
     return op('difference', A, B, a_closed, b_closed, clip_type)
 
-def multi_union(shapes, clip_type='nonzero'):
+def multi_union(shapes, clip_type='nonzero', progress=lambda x: x):
     A = []
-    for B in shapes:
+    for B in progress(shapes):
         A = union(A, B, clip_type=clip_type)
     return A
 
