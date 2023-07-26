@@ -41,6 +41,8 @@ def find_contours(im, invert=False, thresh=127):
             ret, thresh_img = cv2.threshold(im,thresh,256,0)
     else:
         thresh_img = cv2.convertScaleAbs(im.astype(float))
+        if invert:
+            thresh_img = 1 - thresh_img
     #image, contours, hierarchy = cv2.findContours(thresh,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
     contours, hierarchy = cv2.findContours(thresh_img, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     S = []
