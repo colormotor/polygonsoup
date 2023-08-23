@@ -15,10 +15,14 @@ from collections import namedtuple
 from polygonsoup.geom import (radians,
                            affine_transform,
                            rot_2d,
+                              trans_2d,
                             bounding_box,
                             is_compound)
 
 Edge = namedtuple('Edge', 'a b m i')
+
+def quantize(v, step ):
+    return np.round(v/step)*step
 
 def hatch(S, dist, angle=0., flip_horizontal=False, get_hole_count=False, max_count=1000000, eps=1e-10):
     """Generate scanlines for a possibly compound shape
@@ -44,7 +48,13 @@ def hatch(S, dist, angle=0., flip_horizontal=False, get_hole_count=False, max_co
     
     # Rotate shape for oriented hatches 
     theta = radians(angle)
-    mat = rot_2d(-theta, affine=True)
+    box = bounding_box(S)
+    print(box[0])
+    offsetq = np.random.uniform(-3, 3, 2) #quantize(box[0], 4) - box[0]
+    print(offsetq)
+    mat = trans_2d(-offsetq) @ rot_2d(-theta, affine=True)
+    invmat = np.linalg.inv(mat)
+
     S = [affine_transform(mat, P) for P in S]
 
     box = bounding_box(S)
@@ -150,7 +160,7 @@ def hatch(S, dist, angle=0., flip_horizontal=False, get_hole_count=False, max_co
 
     # unrotate
     if scanlines:
-        scanlines = affine_transform(mat.T, scanlines) #np.array(scanlines))
+        scanlines = affine_transform(invmat, scanlines) #np.array(scanlines))
         # make list of hatch segments
         scanlines = [np.array([a, b]) for a, b in zip(scanlines[0::2], scanlines[1::2])]
     return scanlines
