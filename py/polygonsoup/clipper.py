@@ -99,9 +99,9 @@ def op(op_type, A, B, a_closed=True, b_closed=True, clip_type='nonzero'):
             solution = pc.Execute(optypes[op_type], cliptypes[clip_type], cliptypes[clip_type])
         res = conv_from(solution)
     except clip.ClipperException as e:
-        print(e)
+        # print(e)
         #pdb.set_trace()
-        print('Clipper failed, returning first term')
+        # print('Clipper failed, returning first term')
         return conv_from(A)
     return res
 

@@ -76,9 +76,15 @@ def merge(blocks, b0, b1, N):
     return b0
 
 def schematize(P, C, angle_offset, closed=False, get_edge_inds=False, maxiter=1000):
+    if not C:
+        if get_edge_inds:
+            return P, list(range(len(P)-1))
+        return P
+
     P = list(P)
     G = nx.Graph()
     n = len(P)
+
 
     if closed:
         P = P + [np.array(P[0])] #, P[1]]
@@ -201,7 +207,7 @@ def quantize_rotation_matrix(R, C, dtheta=0):
 def quantize_vector(x, C, angle_offset):
     if C == 0:
         return x
-    dtheta = geom.radians(angle_offset + 90) # Needed to make it work with the way the angles are defined in schematization
+    dtheta = geom.radians(angle_offset + 90) # Needed to make it work with the way the angles are defined in schematize
     th = np.arctan2(x[1], x[0])
     th = quantize(th-dtheta, np.pi/(C)) + dtheta
     return np.array([np.cos(th), np.sin(th)])*np.linalg.norm(x)

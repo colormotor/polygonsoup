@@ -72,7 +72,7 @@ def set_theme(style=cfg.default_style, fontsize=7):
     'axes.titlesize': fontsize+1,
     'font.family': 'Times New Roman',
     'text.color': 'k',
-    'lines.markersize': 2,
+    'lines.markersize': 7,
     'lines.linewidth': 0.75,
     'lines.markeredgewidth':0.25,
     'axes.labelsize': fontsize,
@@ -84,9 +84,9 @@ def set_theme(style=cfg.default_style, fontsize=7):
     'legend.fontsize': fontsize*1.2,
     'xtick.labelsize': fontsize*1.1, #*0.9,
     'ytick.labelsize': fontsize*1.1, #*0.9,
-    'xtick.color': '666666',
-    'ytick.color': '666666',
-    'axes.edgecolor' : '666666',
+    'xtick.color': '222222', #666666',
+    'ytick.color': '222222',
+    'axes.edgecolor' : '222222', #666666',
     'axes.grid': True,
     'grid.color': 'cccccc',
     'grid.alpha': 1.,#'dfdfdf',
@@ -94,7 +94,6 @@ def set_theme(style=cfg.default_style, fontsize=7):
     'grid.linewidth' : 0.25,
     'figure.figsize': [3, 3],
     }
-
 
     mpl.rcParams.update(params)
 

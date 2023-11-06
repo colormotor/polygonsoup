@@ -185,7 +185,9 @@ def process_exists(proc_name):
     return False
 
 def print_same_line(s):
-    sys.stdout.write("\r" + str(s))
+    #sys.stdout.write("\r" + str(s))
+    print(s, end='\r')
+    #sys.stdout.flush()
 
 def progress_bar(ratio, bar_len = 20):
     ''' Adapted from https://stackoverflow.com/questions/3173320/text-progress-bar-in-the-console'''

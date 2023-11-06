@@ -27,10 +27,10 @@ def is_compound(S):
     if type(S) != list:
         return False
     if type(S) == list: #[0])==list:
-    #     if not S:
-    #         return True
-    #     if type(S[0])==np.ndarray:
-    #         return True
+        if not S:
+            return True
+        if is_number(S[0][0]):
+            return False
         return True
     if type(S[0])==np.ndarray and len(S[0].shape) > 1:
         return True
@@ -41,6 +41,11 @@ def is_polyline(P):
     if (type(P[0]) == np.ndarray and
         len(P[0].shape) < 2):
         return True
+    if type(P) == list:
+        if is_number(P[0]):
+            return False
+        else:
+            return is_number(P[0][0])
     return False
 
 def direction(angle):
@@ -593,7 +598,18 @@ def perspective(fov, aspect, znear=0.1, zfar=1000):
     
     m[3,2] = -1.0
     return m
-    
+
+def ortho(left, right, bottom, top, near, far):
+    m = np.zeros((4,4))
+    m[0,0] = 2.0 / (right - left)
+    m[1,1] = 2.0 / (top - bottom)
+    m[2,2] = -2.0 / (far - near)
+    m[3,3] = 1.0
+    m[0,3] = -(right + left) / (right - left)
+    m[1,3] = -(top + bottom) / (top - bottom)
+    m[2,3] = -(far + near) / (far - near)
+    return m
+
 def frustum( left, right, bottom, top, near, far ):
     m = np.zeros((4,4))
 
@@ -622,7 +638,7 @@ def affine_transform(mat, data):
         # print('Empty data to affine_transform!')
         return data
     if is_polyline(data):
-        P = data
+        P = np.array(data)
         dim = P[0].size
         P = np.vstack([np.array(P).T, np.ones(len(P))])
         P = mat@P
@@ -706,7 +722,7 @@ def clip_poly_3d(P):
             add_segment()
     return Pc
 
-def view_3d(polyline, modelview, projection, viewport=[vec(-1,-1), (1,1)], clip=True, get_normalized_coords=False):
+def view_3d(polyline, modelview, projection, viewport=[vec(-1,-1), (1,1)], clip=True, pointcloud=False, get_normalized_coords=False):
     ''' Compute 3D viewing transformation for a list of polylines
     Input:
     polylone: 1 or a list of polylines
@@ -718,7 +734,6 @@ def view_3d(polyline, modelview, projection, viewport=[vec(-1,-1), (1,1)], clip=
     Output: projected and possibly clipped 2D polylines
     If clipping is enabled, the number of output polyline is not necessarily the same as the input
     '''
-
     if is_compound(polyline):
         segments = []
         Z = []
@@ -749,13 +764,19 @@ def view_3d(polyline, modelview, projection, viewport=[vec(-1,-1), (1,1)], clip=
     pts = np.vstack([pts, np.ones(pts.shape[1])])
     Pw = (projection@pts).T
     if clip:
-        Pc = clip_poly_3d(Pw)
+        if pointcloud:
+            Pc = [p for p in Pw if p[2] >= 0] #for P in Pw]
+            if Pc:
+                Pc = [Pc]
+        else:
+            Pc = clip_poly_3d(Pw)
     else:
         Pc = [Pw]
-    Pv = [[to_screen(p) for p in seg] for seg in Pc]
+
+    Pv = [[to_screen(p) for p in P] for P in Pc]
     #pdb.set_trace()
     if get_normalized_coords:
-        Z = [[p[:3]/p[3] for p in seg] for seg in Pc]
+        Z = [[p[:3]/p[3] for p in P] for P in Pc]
         return [np.array(P) for P in Pv], Z
     return [np.array(P) for P in Pv]
 
@@ -1125,6 +1146,8 @@ def compute_bspline(pts, closed=False, alpha=1, degree=3, smooth_k=0, w=None, n 
         w = np.ones(pts.shape[0])
     elif is_number(w):
         w = np.ones(pts.shape[0])*w
+        if closed:
+            w = np.concatenate([w, [w[0]]])
     dim = pts.shape[1]
     u = np.linspace(0, 1, pts.shape[0])
     degree = min(degree, pts.shape[0]-1)
@@ -1135,7 +1158,7 @@ def compute_bspline(pts, closed=False, alpha=1, degree=3, smooth_k=0, w=None, n 
     u = np.cumsum(np.concatenate([[0.], s]))
     u = u / u[-1]
 
-    tck, _ = splprep(pts.T, u=u, k=degree, per=closed, s=smooth_k)
+    tck, _ = splprep(pts.T, u=u, k=degree, per=closed, s=smooth_k, w=w)
     if n is not None:
         X = splev(np.linspace(0, 1, n), tck)
         return tck, np.vstack(X).T

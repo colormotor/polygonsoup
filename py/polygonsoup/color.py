@@ -4,6 +4,8 @@ import numpy as np
 from math import fmod
 import random
 import os
+from . import plut
+import matplotlib.pyplot as plt
 
 
 def rgb_to_hsv(rgba):
@@ -131,7 +133,7 @@ def set_saturation(rgb, w):
 class ImagePalette:
     def __init__(self, path):
         import cv2
-        self.im = cv2.imread(path)
+        self.im = cv2.imread(path)[:,:,::-1]
 
     def color(self, u, v):
         h, w, _ = self.im.shape
@@ -141,6 +143,12 @@ class ImagePalette:
 
     def random(self, v):
         return self.color(np.random.uniform(), v)
+
+    def display(self, v):
+        plt.figure(figsize=(4,4))
+        plt.imshow(self.im)
+        plt.plot([-2], [v*self.im.shape[0]], 'ko', markersize=4)
+        plt.show()
 
 class ASEPalette:
     def __init__(self, path):
