@@ -51,7 +51,7 @@ paper_sizes = {
 
 cfg.plotter = NoPlotter()
 
-def set_theme(style=cfg.default_style, fontsize=7):
+def set_theme(style=cfg.default_style, fontsize=12):
     if style:
         # https://towardsdatascience.com/a-new-plot-theme-for-matplotlib-gadfly-2cffc745ff84
         # Place `gadfly.mplstyle` in `~/.matplotlib/stylelib`
