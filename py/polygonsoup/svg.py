@@ -20,6 +20,7 @@ import svgpathtools as svg
 import numpy as np
 import polygonsoup.bezier as bezier
 import polygonsoup.geom as geom
+import pdb
 
 def to_pt(c):
     ''' convert complex number to np vector'''
@@ -68,7 +69,7 @@ def cubic_beziers_from_arc(arc):#r, phi, flagA, flagS, p1, p2):
     phi = geom.radians(arc.rotation)
     flagA = False #arc.large_arc
     flagS = True #arc.sweep
-    print(arc)
+    # irint(arc)
     r_abs = complex(abs(r.real), abs(r.imag))
     d = complex((p1.real - p2.real), (p1.imag - p2.imag))
     p = complex(np.cos(phi)*d.real/2 + np.sin(phi)*d.imag/2,
@@ -134,7 +135,7 @@ def to_bezier(piece):
     elif type(piece)==svg.path.Arc:
         bezs = sum([to_bezier(ap) for ap in cubic_beziers_from_arc(piece)], [])
         print('Arc bezs')
-        print(bezs)
+        # print(bezs)
         return bezs
 
     raise ValueError
@@ -176,7 +177,11 @@ def split_compound_paths(paths):
 
 def svg_to_beziers(path):
     ''' Load Bezier curves from a SVG file'''
-    paths, attributes = svg.svg2paths(path)
+    #pdb.set_trace()
+    doc = svg.Document(path)
+    paths = doc.paths()
+    #paths, attributes = svg.svg2paths(path)
+    #pdb.set_trace()
     paths = split_compound_paths(paths)
     beziers = [path_to_bezier(path) for path in paths]
     return beziers
@@ -188,14 +193,16 @@ def load_svg(file_path, subd=40):
 
 def load_svg_polylines(path):
     ''' Load Bezier curves from a SVG file'''
-    paths, attributes = svg.svg2paths(path)
+    #paths, attributes = svg.svg2paths(path)
+    doc = svg.Document(path)
+    paths = doc.paths()
     paths = split_compound_paths(paths)
     polylines = [path_to_polyline(path) for path in paths]
     return polylines
 
 def load_svg_bezier_chains(file_path, subd=40):
     paths = svg_to_beziers(file_path)
-    return [path.T for path in paths]
+    return [path for path in paths]
 
 def save_svg_polylines(S, file_path, closed=False):
     if type(closed)==bool:
