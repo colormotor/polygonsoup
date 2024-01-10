@@ -103,17 +103,20 @@ def curved_offset(spine, widths, n=0, degree=3, closed=False, smooth_k=0):
     dx, dy, dw = splev(t, spl, der=1)
 
     centers = np.vstack([x, y])
-    tangents = np.vstack([dx, dy]) / np.sqrt(dx**2 + dy**2)
+    tangents = np.vstack([dx, dy]) / (np.sqrt(dx**2 + dy**2) + 1e-10)
     normals = np.vstack([-tangents[1,:], tangents[0,:]])
 
     pts = (centers + normals*w).T
     if closed:
         pts = np.vstack([pts, pts[0]])
 
+    #print(pts)
+
     #return centers.T
     res = geom.smoothing_spline(n, pts, smooth_k=smooth_k, closed=closed)
     if closed:
         res = np.vstack([res, res[0]])
+
     return res
 
 
