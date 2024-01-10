@@ -19,6 +19,7 @@ import matplotlib
 import numpy as np
 import matplotlib as mpl
 import polygonsoup.geom as geom
+import platform
 
 cfg = lambda: None
 cfg.dpi = 100
@@ -51,7 +52,7 @@ paper_sizes = {
 
 cfg.plotter = NoPlotter()
 
-def set_theme(style=cfg.default_style, fontsize=12):
+def set_theme(style=cfg.default_style, fontsize=9):
     if style:
         # https://towardsdatascience.com/a-new-plot-theme-for-matplotlib-gadfly-2cffc745ff84
         # Place `gadfly.mplstyle` in `~/.matplotlib/stylelib`
@@ -371,6 +372,12 @@ def show_plot(vals, clr='k', figsize=(5,5), **kwargs):
         plt.plot(y, **kwargs)
     plt.show()
 
+def show_open(filename):
+    plt.savefig(filename)
+    if platform.system() == 'Darwin':
+        subprocess.run(['open', filename])
+    else:
+        subprocess.run(['xdg-open', filename])
 
 def show(title='', padding=0, box=None, axis=False, ydown=True, file='', debug_box=False):
     if title:
