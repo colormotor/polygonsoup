@@ -201,3 +201,36 @@ def spline_to_bezier(tck):
     c = np.array(c).T
 
     return np.split(c, len(c) // desired_multiplicity)
+
+
+def cubic_bspline_to_bezier_chain(P, periodic=False):
+    ''' Converts a bspline to a Bezier chain
+        Naive implementation of Bohm's algorithm for knot insertion
+        This is a bit confusing, but rest=True assumes that the input (spline)
+        control points already have repeated knots at the start and end
+        In practice, rest=False needs to be fixed since we do not take knot multiplicity into account here'''
+    def lerp(a, b, t):
+        return a + t*(b - a)
+
+    if periodic:
+        P = np.vstack([P[-1], P, P[0], P[1]])
+    else:
+        P = np.vstack([P[0], P[0], P, P[-1], P[-1]])
+
+    n = P.shape[0]-1
+    Cp = []
+    for i in range(n-2):
+        p = P[i:i+4]
+        b1 = lerp(p[1], p[2], 1./3)
+        b2 = lerp(p[2], p[1], 1./3)
+        l = lerp(p[1], p[0], 1./3)
+        r = lerp(p[2], p[3], 1./3)
+
+        if not Cp:
+            b0 = lerp(l, b1, 0.5)
+            b3 = lerp(b2, r, 0.5)
+            Cp += [b0, b1, b2, b3]
+        else:
+            b3 = lerp(b2, r, 0.5)
+            Cp += [b1, b2, b3]
+    return np.array(Cp)
