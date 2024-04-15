@@ -12,7 +12,7 @@ utils - general Python utilitis (performance, files, strings)
 
 
 import pickle
-import os, sys, time, shutil
+import os, sys, time, shutil, requests
 import argparse
 
 import json
@@ -200,3 +200,99 @@ def progress_bar(ratio, bar_len = 20):
             progress += " "
     sys.stdout.write("[ %s ] %.2f%%" % (progress, min(ratio * 100, 100)))
     sys.stdout.flush()
+
+#!/usr/bin/env python3
+import os, requests
+
+cfg = lambda: None
+cfg.dropbox_dir = '/transfer_box'
+cfg.tmp_file = ''
+
+def to_dropox(path, dropbox_dir='/transfer_box'):
+    cfg.dropbox_dir = dropbox_dir
+    cfg.tmp_file = os.path.abspath(path)
+    return cfg.tmp_file
+
+def dropbox_upload(token_path='~/dbox.txt'):
+    TOKEN = open(os.path.expanduser(token_path)).read().strip()
+    name = os.path.basename(cfg.tmp_file)
+    create_dropbox_dir(cfg.dropbox_dir)
+    dropbox_path = os.path.join(cfg.dropbox_dir, name)
+
+    try:
+        headers = {
+            'Authorization': f'Bearer {TOKEN}',
+            'Content-Type': 'application/octet-stream',
+            'Dropbox-API-Arg': f'{{"path": "{dropbox_path}", "mode": "add"}}'
+        }
+
+        # Read the file content
+        with open(cfg.tmp_file, 'rb') as file:
+            file_content = file.read()
+
+        # Make a request to the Dropbox API to upload the file
+        response = requests.post(
+            'https://content.dropboxapi.com/2/files/upload',
+            headers=headers,
+            data=file_content
+        )
+
+        # Check if the request was successful
+        if response.status_code == 200:
+            print("File uploaded to Dropbox successfully.")
+        else:
+            print(f"Failed to upload file to Dropbox: {response.status_code} - {response.text}")
+
+        os.remove(cfg.tmp_file)
+
+    except Exception as e:
+        print("Error:", e)
+
+
+def create_dropbox_dir(path, token_path='~/dbox.txt'):
+    import os
+    import dropbox
+    from dropbox.exceptions import ApiError, AuthError
+    TOKEN = open(os.path.expanduser(token_path)).read().strip()
+    try:
+        # Initialize Dropbox client
+        dbx = dropbox.Dropbox(TOKEN)
+
+        # Check if the directory already exists
+        exists = False
+        try:
+            dbx.files_get_metadata(path)
+            exists = True
+        except ApiError as e:
+            if e.error.is_path() and e.error.get_path().is_not_found():
+                exists = False
+            else:
+                raise
+
+        # Create the directory if it does not exist
+        if not exists:
+            dbx.files_create_folder_v2(path)
+            print(f"Directory '{path}' created successfully.")
+        else:
+            print(f"Directory '{path}' already exists.")
+
+    except AuthError as e:
+        print("Authentication error:", e)
+    except Exception as e:
+        print("Error:", e)
+
+
+''' Dropbox utilities usage
+# Requires pip install dropbox
+# And a file dbox.txt with the token in the home directory
+
+if __name__ == "__main__":
+    directory_path = '/transfer_box/igor'
+    create_dropbox_dir(directory_path)
+
+    f = open(to_dropox('./test.txt', '/transfer_box/igor'), 'w')
+    f.write('Hello, Dropbox!')
+    f.close()
+    upload()
+
+ '''
