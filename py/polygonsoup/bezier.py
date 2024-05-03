@@ -234,3 +234,37 @@ def cubic_bspline_to_bezier_chain(P, periodic=False):
             b3 = lerp(b2, r, 0.5)
             Cp += [b1, b2, b3]
     return np.array(Cp)
+
+def point_segment_distance(p, a, b):
+    d = b - a
+    # relative projection length
+    u = np.dot( p - a, d ) / np.dot(d, d)
+    u = np.clip(u, 0, 1)
+
+    proj = a + u*d
+    return np.linalg.norm(proj - p)
+
+def decasteljau(pts, bez, tol, level=0):
+    if level > 12:
+        return
+    p1, p2, p3, p4 = bez
+    p12   = (p1 + p2) * 0.5
+    p23   = (p2 + p3) * 0.5
+    p34   = (p3 + p4) * 0.5
+    p123  = (p12 + p23) * 0.5
+    p234  = (p23 + p34) * 0.5
+    p1234 = (p123 + p234) * 0.5
+
+    d = point_segment_distance(p1234, p1, p4)
+    if d > tol * tol:
+        decasteljau(pts, [p1, p12, p123, p1234], tol, level + 1)
+        decasteljau(pts, [p1234, p234, p34, p4], tol, level + 1)
+    else:
+        pts.append(p4)
+
+def cubic_bezier_adaptive(Cp, tol):
+    Cp = np.array(Cp)
+    pts = [Cp[0]]
+    for i in range(0, len(Cp) - 1, 3):
+        decasteljau(pts, Cp[i:i+4], tol)
+    return np.array(pts)

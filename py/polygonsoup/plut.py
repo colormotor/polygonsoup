@@ -71,7 +71,7 @@ def set_theme(style=cfg.default_style, fontsize=9):
     'pdf.fonttype': 42,
     'ps.fonttype': 42,
     'axes.titlesize': fontsize+1,
-    'font.family': 'Times New Roman',
+    #'font.family': 'Times New Roman',
     'text.color': 'k',
     'lines.markersize': 7,
     'lines.linewidth': 0.75,
@@ -98,7 +98,7 @@ def set_theme(style=cfg.default_style, fontsize=9):
 
     mpl.rcParams.update(params)
 
-set_theme()
+#set_theme()
 
 
 def stroke(S, clr='k', closed=False, **kwargs):
