@@ -13,11 +13,11 @@ hatch - 2d hatching
 import numpy as np
 from collections import namedtuple
 from polygonsoup.geom import (radians,
-                           affine_transform,
-                           rot_2d,
+                              affine_transform,
+                              rot_2d,
                               trans_2d,
-                            bounding_box,
-                            is_compound)
+                              bounding_box,
+                              is_compound)
 
 Edge = namedtuple('Edge', 'a b m i')
 

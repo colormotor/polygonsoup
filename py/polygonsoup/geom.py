@@ -370,7 +370,7 @@ def rect_in_rect(src, dst, padding=0., axis=None):
 
     ratiow = dst_w/src_w
     ratioh = dst_h/src_h
-
+    print('ratios') #, ratiow, ratioh)
     if axis==None:
         if ratiow <= ratioh:
             axis = 1
@@ -1243,6 +1243,34 @@ def smoothing_spline(n, pts, der=0, ds=0., closed=False, w=None, smooth_k=0, deg
         return res
     res = splev(t, spl, der=der)
     return np.vstack(res).T
+
+def curved_offset(spine, widths, n=0, degree=3, closed=False, smooth_k=0):
+    # smoothing spline
+    if n==0:
+        n = spine.shape[0]
+    #print(closed)
+    degree = min(degree, n-1)
+    # parameterization
+    u = np.linspace(0, 1, spine.shape[0]) #geom.cum_chord_lengths(spine)
+    u = u/u[-1]
+    spl, u = splprep(np.vstack([spine.T, widths]), u=u, k=degree, per=closed, s=smooth_k)
+    t = np.linspace(0, 1, n)
+    x, y, w = splev(t, spl)
+    dx, dy, dw = splev(t, spl, der=1)
+
+    centers = np.vstack([x, y])
+    tangents = np.vstack([dx, dy]) / (np.sqrt(dx**2 + dy**2) + 1e-10)
+    normals = np.vstack([-tangents[1,:], tangents[0,:]])
+
+    pts = (centers + normals*w).T
+    if closed:
+        pts = np.vstack([pts, pts[0]])
+
+    res = smoothing_spline(n, pts, smooth_k=smooth_k, closed=closed)
+    if closed:
+        res = np.vstack([res, res[0]])
+
+    return res
 
 def cleanup_contour(X, eps=1e-10, closed=False, get_inds=False):
     ''' Removes points that are closer then a threshold eps'''
