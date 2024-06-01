@@ -12,7 +12,6 @@ imaging - imaging utils
 
 
 import polygonsoup.geom as geom
-import polygonsoup.plut as plut
 import pdb
 
 from PIL import Image, ImageDraw, ImageFont

@@ -344,11 +344,16 @@ def show_drawing(drawing, size='A4', title='', padding=0, plotter=NoPlotter()):
         stroke(P, 'k')
     show(title, padding)
 
-def figure(size="A5", plotter=NoPlotter(), figscale=1):
-    if type(size)==str:
-        w, h = paper_sizes[size]
+def figure_inches(w, h, dpi=None):
+    if dpi is not None:
+        cfg.dpi = dpi
+    return figure((w,h))
+
+def figure(figsize="A5", plotter=NoPlotter(), figscale=1):
+    if type(figsize)==str:
+        w, h = paper_sizes[figsize]
     else:
-        w, h = size
+        w, h = figsize
     fig = plt.figure(dpi=cfg.dpi)
     wfig, hfig = w*figscale, h*figscale
 
