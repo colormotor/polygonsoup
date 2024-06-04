@@ -370,7 +370,6 @@ def rect_in_rect(src, dst, padding=0., axis=None):
 
     ratiow = dst_w/src_w
     ratioh = dst_h/src_h
-    print('ratios') #, ratiow, ratioh)
     if axis==None:
         if ratiow <= ratioh:
             axis = 1
