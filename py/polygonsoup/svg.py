@@ -204,13 +204,17 @@ def load_svg_bezier_chains(file_path, subd=40):
     paths = svg_to_beziers(file_path)
     return [path for path in paths]
 
-def save_svg_polylines(S, file_path, closed=False):
+def save_svg_polylines(S, file_path, stroke_widths=None, closed=False, dimensions=None, unit='mm', **kwargs):
     if type(closed)==bool:
         closed = [closed for _ in S]
+        print(closed)
     S = [geom.close(P) if c else P for P, c in zip(S, closed)]
+    if stroke_widths is None:
+        stroke_widths = [1.0]*len(S)
+    if dimensions is not None:
+        dimensions = ('%.2f%s'%(dimensions[0], unit), '%.2f%s'%(dimensions[1], unit))
     paths = [svg.Path(*[svg.Line(start=complex(*a), end=complex(*b)) for a, b in zip(P, P[1:])]) for P in S if len(P) > 1]
-    svg.wsvg(paths, filename=file_path)
-
+    svg.wsvg(paths, filename=file_path, stroke_widths=stroke_widths, dimensions=dimensions) # **kwargs)
 
 try:
     #import drawSvg as dsvg
