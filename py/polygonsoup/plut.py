@@ -52,7 +52,7 @@ paper_sizes = {
 
 cfg.plotter = NoPlotter()
 
-def set_theme(style=cfg.default_style, fontsize=9):
+def set_theme(style=cfg.default_style, fontsize=9, opts={}):
     if style:
         # https://towardsdatascience.com/a-new-plot-theme-for-matplotlib-gadfly-2cffc745ff84
         # Place `gadfly.mplstyle` in `~/.matplotlib/stylelib`
@@ -96,9 +96,10 @@ def set_theme(style=cfg.default_style, fontsize=9):
     'figure.figsize': [3, 3],
     }
 
+    params.update(opts)
     mpl.rcParams.update(params)
 
-set_theme()
+#set_theme()
 
 
 def stroke(S, clr='k', closed=False, **kwargs):
