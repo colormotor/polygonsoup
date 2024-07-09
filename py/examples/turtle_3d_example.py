@@ -24,7 +24,7 @@ for i in range(3): # Try repeating the steps multiple times
         p = p + H[:3,2]*d # update position (using Z as "forward")
         P.append(p)
 
-S = [P] # The 3d polylines that will be transformed (in this case 1)
+S = [np.array(P)] # The 3d polylines that will be transformed (in this case 1)
 
 # axes (for reference)
 axes = [np.array([[0, 0, 0], [1, 0, 0]]),
@@ -34,7 +34,7 @@ axes = [np.array([[0, 0, 0], [1, 0, 0]]),
 # Camera transformation (Y points up by default)
 view = (trans_3d([0, 0, -10.5]) @
         rotx_3d(0.5) @ # X-rotation (so we view a bit from top)
-        roty_3d(0.3)) # Y-rotation
+        roty_3d(-0.3)) # Y-rotation
 
 # View rect
 viewport = geom.make_rect(0, 0, 4, 4)

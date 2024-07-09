@@ -201,6 +201,7 @@ def progress_bar(ratio, bar_len = 20):
     sys.stdout.write("[ %s ] %.2f%%" % (progress, min(ratio * 100, 100)))
     sys.stdout.flush()
 
+
 #!/usr/bin/env python3
 import os, requests
 

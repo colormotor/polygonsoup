@@ -24,7 +24,7 @@ S.append(hexagon)
 np.random.seed(10)
 
 # Camera transformation (Y points up by default)
-view = (trans_3d(vec(0, 0, -2.5)) @
+view = (trans_3d(vec(0, 0, -1.5)) @
         rotx_3d(0.2) @ # X-rotation
         roty_3d(np.random.uniform(-1, 1)*0.7)) # Y-rotation
 # View rect
@@ -32,7 +32,7 @@ viewport = geom.make_rect(0, 0, 4, 2)
 # Projection matrix (switch between perspective and parallel)
 proj = geom.perspective(geom.radians(60), geom.rect_aspect(viewport))
 # Viewport transformations 3d -> 2d
-Sv = geom.view_3d(S, view, proj, viewport, clip=False)
+Sv = geom.view_3d(S, view, proj, viewport, clip=True)
 
 # clip True/False enables/disables viewport clipping
 proj = geom.parallel(geom.rect_aspect(viewport))
