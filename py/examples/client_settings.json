@@ -1,7 +1,0 @@
-{
-    "comment":"Locate this file in the same directory as your script",
-    "comment2":"creating a plotter with: plotter = plotters.AxiDrawClient() will try to find the file",
-
-    "address":"localhost",
-    "port":9001
-}
