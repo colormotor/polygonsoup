@@ -14,7 +14,7 @@ utils - general Python utilitis (performance, files, strings)
 import pickle
 import os, sys, time, shutil, requests
 import argparse
-
+import importlib
 import json
 import numpy as np
 
@@ -34,6 +34,10 @@ class perf_timer:
         if self.name and self.verbose:
             print('%s: elapsed time %.3f milliseconds'%(self.name, self.elapsed))
 
+def reload(*modules):
+    ''' Reload multiple modules'''
+    for m in modules:
+        importlib.reload(m)
 
 ### Serialization
 def load_pkl(data_path):
