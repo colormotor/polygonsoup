@@ -16,6 +16,7 @@ import matplotlib.pyplot as plt
 from scipy.special import binom
 from numpy.linalg import norm
 from scipy.interpolate import interp1d
+import math
 
 def num_bezier(n_ctrl, degree=3):
     if type(n_ctrl) == np.ndarray:

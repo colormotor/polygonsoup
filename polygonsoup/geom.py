@@ -1243,6 +1243,21 @@ def smoothing_spline(n, pts, der=0, ds=0., closed=False, w=None, smooth_k=0, deg
     res = splev(t, spl, der=der)
     return np.vstack(res).T
 
+def thick_curve(Xw, scalefn=lambda x: x, smooth_k=0, union=True, add_cap=True):
+    from . import clipper
+    Xw = np.array(Xw)
+    Xw[:,2] = scalefn(Xw[:,2])
+    Ol = curved_offset(Xw[:,:2], Xw[:,2], smooth_k)[::-1]
+    Or = curved_offset(Xw[:,:2], -Xw[:,2], smooth_k)
+    stroke = np.vstack([Ol, Or])
+    if union:
+        stroke = clipper.union(stroke, stroke)
+        if add_cap:
+           stroke = clipper.union(stroke, shapes.circle(Xw[0,:2], Xw[0,2]))
+           stroke = clipper.union(stroke, shapes.circle(Xw[-1,:2], Xw[-1,2]))
+
+    return stroke
+
 def curved_offset(spine, widths, n=0, degree=3, closed=False, smooth_k=0):
     # smoothing spline
     if n==0:
