@@ -12,7 +12,7 @@ plotters - plotter/drawing machine interfaces
 
 import socket, sys, copy
 import numpy as np
-import time
+import time, os
 import polygonsoup.geom as geom
 from polygonsoup.plut import NoPlotter
 # class NoPlotter:
@@ -82,9 +82,9 @@ class AxiPlotter:
             print(e)
             print('Could not find axi module')
 
-class AxiDrawClient:
+class PlotterClient:
     ''' Plots to a remote instance of axidraw_server.py'''
-    def __init__(self, address_or_settings='./client_settings.json', port=None, raw=False): #, blocking=False):
+    def __init__(self, address_or_settings='localhost', port=80, raw=False): #, blocking=False):
         """
         :param address_or_settings:  (Default value = './client_settings.json') This parameter can specify either an IP address for a server,
         or the path to a json file containing the connection settings. The json file must contain the entries 'address' and 'port' with
@@ -115,6 +115,15 @@ class AxiDrawClient:
         self.bounds = None
         self.raw = raw
         self.print_err = True
+
+    def __enter__(self):
+        self.open()
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
+        # Return False to propagate exceptions if any occurred, True to suppress them
+        return False
 
     def open(self):
         if self.address == None:
@@ -218,6 +227,7 @@ class AxiDrawClient:
             self.sendln('PATHCMD stroke %d %s'%path_to_str(P))
         elif len(P[0])==3:
             self.sendln('PATHCMD stroke3 %d %s'%path_to_str(P))
+
     def pen_up(self):
         self.sendln('PATHCMD pen_up')
 
@@ -226,6 +236,9 @@ class AxiDrawClient:
 
     def home(self):
         self.sendln('PATHCMD home')
+
+    def feedrate(self, amt):
+        self.sendln('PATHCMD feedrate %d'%(int(amt)))
 
     # Interface with plot module
     def _set_bounds(self, w, h):
@@ -295,6 +308,7 @@ def path_to_str(P):
         return len(P), ' '.join(['%f %f'%(p[0], p[1]) for p in P])
     return len(P), ' '.join(['%f %f %f'%(p[0], p[1], p[2]) for p in P])
 
+AxiDrawClient = PlotterClient
 
 def recv_line(sock):
     s = ''

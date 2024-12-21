@@ -475,6 +475,13 @@ def fit_shapes_in_grid(shapes, rect, nrows, ncols, margin=0, padding=0, flatten=
         return fitted, matrices
     return fitted
 
+def det22(mat):
+    return mat[0,0] * mat[1,1] - mat[0,1]*mat[1,0]
+
+def scale_factor_2d(mat):
+    return np.sqrt(det22(mat))
+
+
 # 2d transformations (affine)
 def rotate_vector_2d(v, ang):
     ''' 2d rotation matrix'''
@@ -1331,6 +1338,7 @@ def chord_length( P, closed=0 ):
         return 0.
     L = chord_lengths(P, closed)
     return np.sum(L)
+
 
 def polygon_area(P):
     if len(P.shape) < 2 or P.shape[0] < 3:

@@ -16,7 +16,7 @@ import polygonsoup.geom as geom
 import numpy as np
 from scipy.interpolate import splprep, splev
 
-def curved_skeletal_stroke(prototype, spine_, widths, closed=False, smooth_k=0, degree=3):
+def curved_skeletal_stroke(prototype, spine_, widths, closed=False, smooth_k=0, degree=3, xfunc=lambda t: t):
     '''Simplified warping along a spine assumed to be a relatively smooth curve'''
     # Avoid coincident points
     spine, I = geom.cleanup_contour(spine_, get_inds=True)
@@ -35,12 +35,12 @@ def curved_skeletal_stroke(prototype, spine_, widths, closed=False, smooth_k=0, 
     # normalize prototype
     box = geom.bounding_box(prototype)
     w, h = geom.rect_size(box)
-    prototype = geom.affine_transform( geom.scaling_2d([1.0/w, 1.0/w])@geom.trans_2d(-box[0] - [0, h/2]), prototype )
+    prototype = geom.affine_transform( geom.scaling_2d([1/w, 1/h])@geom.trans_2d(-box[0] - [0, h/2]), prototype )
 
     # warp
     flesh = []
     for P in prototype:
-        t = P[:,0]
+        t = xfunc(P[:,0])
         h = P[:,1]
         x, y, w = splev(t, spl)
         dx, dy, dw = splev(t, spl, der=1)
