@@ -49,9 +49,7 @@ def hatch(S, dist, angle=0., flip_horizontal=False, get_hole_count=False, max_co
     # Rotate shape for oriented hatches 
     theta = radians(angle)
     box = bounding_box(S)
-    print(box[0])
     offsetq = np.random.uniform(-3, 3, 2) #quantize(box[0], 4) - box[0]
-    print(offsetq)
     mat = trans_2d(-offsetq) @ rot_2d(-theta, affine=True)
     invmat = np.linalg.inv(mat)
 

@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 
-#
+# Based on:
 #       axiserver.py - tiny AxiDraw plot server
 #
 #               Chris Pirazzi and Paul Haeberli
-#
-# For details and instructions, see https://lurkertech.com/axiserver
 #
 # some simple additions by Daniel Berio
 

@@ -14,7 +14,7 @@ import socket, sys, copy
 import numpy as np
 import time, os
 import polygonsoup.geom as geom
-from polygonsoup.plut import NoPlotter
+
 # class NoPlotter:
 #     '''Default dummy plotter
 #       Use AxiDrawClient or AxiPlotter to plot somethign
