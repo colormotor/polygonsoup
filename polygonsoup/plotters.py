@@ -170,6 +170,12 @@ class PlotterClient:
             self.sendln('PATHCMD title ' + title)
         self.sendln('PATHCMD drawing_start')
 
+    def drawing_start_feed(self, title=''):
+        self.open()
+        if title:
+            self.sendln('PATHCMD title ' + title)
+        self.sendln('PATHCMD drawing_start_feed')
+
     def drawing_end(self, close=False):
         if self.raw:
             self.drawing_end_raw()
@@ -183,9 +189,12 @@ class PlotterClient:
         self.sendln('PATHCMD drawing_end_raw')
         self.close()
 
-    def draw_paths(self, S, title='', close=False):
+    def draw_paths(self, S, title='', close=False, has_feedrate=False):
         try:
-            self.drawing_start(title)
+            if has_feedrate:
+                self.drawing_start_feed(title)
+            else:
+                self.drawing_start(title)
             for P in S:
                 if type(P) == str:
                     print('sending cmd ' + P)
@@ -193,8 +202,10 @@ class PlotterClient:
                     #self.sendln(P)
                 else:
                     print('sending path ')
-                    print(P)
-                    self.add_path(P)
+                    #print(P)
+                    if has_feedrate:
+                        print('min feed', np.min(P[:,-1]))
+                    self.add_path(P, has_feedrate=has_feedrate)
             self.drawing_end(close)
 
         except ConnectionRefusedError as e:
@@ -220,13 +231,19 @@ class PlotterClient:
             return True
         return False
 
-    def add_path(self, P):
+    def add_path(self, P, has_feedrate=False):
         if not len(P):
             return
-        if len(P[0])==2:
-            self.sendln('PATHCMD stroke %d %s'%path_to_str(P))
-        elif len(P[0])==3:
-            self.sendln('PATHCMD stroke3 %d %s'%path_to_str(P))
+        if has_feedrate:
+            if len(P[0])==3:
+                self.sendln('PATHCMD fstroke %d %s'%path_to_str(P))
+            elif len(P[0])==4:
+                self.sendln('PATHCMD fstroke3 %d %s'%path_to_str(P))
+        else:
+            if len(P[0])==2:
+                self.sendln('PATHCMD stroke %d %s'%path_to_str(P))
+            elif len(P[0])==3:
+                self.sendln('PATHCMD stroke3 %d %s'%path_to_str(P))
 
     def pen_up(self):
         self.sendln('PATHCMD pen_up')
@@ -304,9 +321,12 @@ def path_to_str(P):
     ''' Convert a path to a (num_points, point sequence) tuple'''
     #if type(P) == np.ndarray:
     #    P = P.T
-    if len(P[0]) == 2:
-        return len(P), ' '.join(['%f %f'%(p[0], p[1]) for p in P])
-    return len(P), ' '.join(['%f %f %f'%(p[0], p[1], p[2]) for p in P])
+    dim = len(P[0])
+    fmt = ' '.join(['%f' for _ in range(dim)])
+    return len(P), ' '.join([fmt%tuple(p) for p in P])
+    # if len(P[0]) == 2:
+    #     return len(P), ' '.join(['%f %f'%(p[0], p[1]) for p in P])
+    # return len(P), ' '.join(['%f %f %f'%(p[0], p[1], p[2]) for p in P])
 
 AxiDrawClient = PlotterClient
 
