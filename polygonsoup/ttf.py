@@ -253,6 +253,21 @@ class FontDatabase:
         ds = self.get_font_height(font)/target_height
         return glyph_shape_uniform(self.font_paths[font], char, steps, ds)
 
+    def get_string_shapes(self, font, txt, spacing=1, steps=30, merge=True):
+        if type(font)==str:
+            font = self.db[font]
+        path = self.font_paths[font]
+        x = 0
+        shapes = []
+        for c in txt:
+            S = glyph_shape(path, c, steps)
+            S = geom.tsm(geom.trans_2d([x, 0]), S)
+            x += glyph_width(path, c)*spacing
+            shapes.append(S)
+        if merge:
+            shapes = sum(shapes, [])
+        return shapes
+
     def list_font_names(self):
         for i in range(self.num_fonts):
             print('%d: %s'%(i,self.get_font_name(i)))

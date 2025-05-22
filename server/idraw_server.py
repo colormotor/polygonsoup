@@ -28,7 +28,10 @@ args.add_argument('--port', type=int, default=80,
                  help='''Server port number''')
 args.add_argument('--baudrate', type=int, default=115200,
                  help='''Device baudrate''')
-args.add_argument('--feedrate', type=int, default=100)
+args.add_argument('--feedrate', type=int, default=3000)
+args.add_argument('--feedrate_move', type=int, default=5000)
+args.add_argument('--feedrate_pen', type=int, default=1000)
+
 args.add_argument('--homing', type=int, default=0)
 args.add_argument('--pd', type=float, default=6, #-45,
                  help='''Pen up distance (higher value is lower)''')
@@ -161,6 +164,8 @@ class GrblDevice(threading.Thread):
 
         ack = False
         print("Setting millimeters")
+        #s.write('$$\n'.encode())
+        #time.sleep(0.1)
         self.command('G21') # millimeters
         self.command('G17') # Xy
         self.command('G90') # Absolute
@@ -224,7 +229,7 @@ class GrblDevice(threading.Thread):
         if newchunk:
             lock.acquire()
             self.chunks.append([])
-        self.chunks[-1].append(f'G1 Z{cfg.pu}')
+        self.chunks[-1].append(f'G0 Z{cfg.pu}') # F{cfg.feedrate_pen}')
         if newchunk:
             lock.release()
 
@@ -232,7 +237,7 @@ class GrblDevice(threading.Thread):
         if newchunk:
             lock.acquire()
             self.chunks.append([])
-        self.chunks[-1].append(f'G1 Z{cfg.pd}')
+        self.chunks[-1].append(f'G0 Z{cfg.pd}') # F{cfg.feedrate_pen}')
         if newchunk:
             lock.release()
 
@@ -244,6 +249,48 @@ class GrblDevice(threading.Thread):
         #     print('Maximum feedrate is 2500')
         #     f = 100
         self.command('F%d'%int(f))
+
+    def draw_path_feedrate(self, P, newchunk=True):
+        def pointstr(p):
+            #print(len(p))
+            #print(p)
+            if len(p) == 3:
+                return 'X%.2f Y%.2f F%d'%(p[0], -p[1], int(p[-1]))
+            elif len(p) == 2:
+                return 'X%.2f Y%.2f'%(p[0], -p[1])
+            else:
+                return 'X%.2f Y%.2f Z%.2f F%d'%(p[0], -p[1], max(0, min(p[2], MAX_PD)), int(p[-1]))
+
+        if newchunk:
+            lock.acquire()
+            self.chunks.append([])
+        #self.cmd_count = 0
+        c = 0
+        self.pen_up(False)
+        c+=1
+        for i, p in enumerate(P):
+            if not i:
+                # Move to first point 2d no feedrate
+                self.chunks[-1].append('G0 ' + pointstr(p[:2])) # + ' F%d'%cfg.feedrate_move) #X%.2f Y%.2f'%(p[0], p[1]))
+
+                #self.chunks[-1].append('G0 X%.2f Y%.2f'%(p[0], p[1]))
+                # Skip feedrate on first move
+                self.chunks[-1].append('G1 ' + pointstr(p)) #X%.2f Y%.2f'%(p[0], p[1]))
+                c+=1
+                if len(p) < 4:
+                    self.pen_down(False)
+                c+=1
+            else:
+                #self.chunks[-1].append('G1 X%.2f Y%.2f F20000.0'%(p[0], p[1])) #F2700.0
+                self.chunks[-1].append('G1 ' + pointstr(p)) # + ' F20000.0')
+                #print(self.chunks[-1])
+                c+=1
+        self.pen_up(False)
+        c+=1
+        if newchunk:
+            lock.release()
+        print('Desired cmd count: %d'%(c))
+        return c
 
     def draw_path(self, P, newchunk=True):
         def pointstr(p):
@@ -262,7 +309,7 @@ class GrblDevice(threading.Thread):
         for i, p in enumerate(P):
             if not i:
                 if len(p) > 2:
-                    self.chunks[-1].append('G1 ' + pointstr(p[:2])) #X%.2f Y%.2f'%(p[0], p[1]))
+                    self.chunks[-1].append('G0 ' + pointstr(p[:2])) # + ' F%d'%cfg.feedrate_move) #X%.2f Y%.2f'%(p[0], p[1]))
 
                 #self.chunks[-1].append('G0 X%.2f Y%.2f'%(p[0], p[1]))
                 self.chunks[-1].append('G1 ' + pointstr(p)) #X%.2f Y%.2f'%(p[0], p[1]))
@@ -281,16 +328,19 @@ class GrblDevice(threading.Thread):
         print('Desired cmd count: %d'%(c))
         return c
 
-    def draw_paths(self, paths):
+    def draw_paths(self, paths, feedrate=False):
         lock.acquire()
         self.chunks.append([])
         self.cmd_count = 0
+        draw_path = self.draw_path
+        if feedrate:
+            draw_path = self.draw_path_feedrate
         c = 0
         for P in paths:
             if type(P) == str:
                 self.command(P, False)
             else:
-                c += self.draw_path(P, False)
+                c += draw_path(P, False)
         lock.release()
         print('Desired cmd count: %d'%c)
 
@@ -353,6 +403,7 @@ def recv(connection):
 
 curpath = []
 paths = []
+has_feedrate = False
 title = ''
 
 def set_title(txt):
@@ -364,24 +415,21 @@ def stroke_start():
     global curpath
     curpath = []
 
-def stroke_addpoint(x, y):
-    global curpath
-    curpath.append((x, y))
 
-def stroke_addpoint3(x, y, z):
+def stroke_addpoint(p):
     global curpath
-    curpath.append((x, y, z))
+    curpath.append(p)
 
 def stroke_end():
     global paths
     global curpath
     paths.append(np.array(curpath))
 
-
-def drawing_start():
+def drawing_start(feedrate=False):
     print("DRAWING START")
-    global paths
+    global paths, has_feedrate
     paths = []
+    has_feedrate = feedrate
 
 def drawing_add_cmd(cmd):
     global paths
@@ -392,7 +440,7 @@ def drawing_add_cmd(cmd):
 def drawing_end():
     S = [np.array(P) if type(P) != str else P for P in paths]
     print('Sending to device:')
-    device.draw_paths(S)
+    device.draw_paths(S, has_feedrate)
     print("DRAWING END")
     print("")
 
@@ -401,6 +449,9 @@ def pathcmd(*ary):
     if "drawing_start" in ary[1]:
         print("PCMD: start")
         drawing_start()
+    if "drawing_start_feed" in ary[1]:
+        print("PCMD: start")
+        drawing_start(True)
     elif "drawing_end" in ary[1]:
         print("PCMD: end")
         drawing_end()
@@ -413,7 +464,7 @@ def pathcmd(*ary):
             x = float(ary[2*i+3])
             y = float(ary[2*i+4])
             #print("pointx: " + str(x) + "pointy: " + str(y))
-            stroke_addpoint(x, y)
+            stroke_addpoint((x, y))
         stroke_end()
     elif ary[1] == "stroke3":
         print("PCMD: stroke3")
@@ -425,7 +476,32 @@ def pathcmd(*ary):
             y = float(ary[3*i+4])
             z = float(ary[3*i+5])
             #print("pointx: " + str(x) + "pointy: " + str(y))
-            stroke_addpoint3(x, y, z)
+            stroke_addpoint((x, y, z))
+        stroke_end()
+    elif ary[1] == "fstroke":
+        print("PCMD: fstroke")
+        npoints = ary[2]
+        #print("npoints" + npoints)
+        stroke_start()
+        for i in range(int(npoints)):
+            x = float(ary[3*i+3])
+            y = float(ary[3*i+4])
+            f = float(ary[3*i+5])
+            #print("pointx: " + str(x) + "pointy: " + str(y))
+            stroke_addpoint((x, y, f))
+        stroke_end()
+    elif ary[1] == "fstroke3":
+        print("PCMD: stroke3")
+        npoints = ary[2]
+        #print("npoints" + npoints)
+        stroke_start()
+        for i in range(int(npoints)):
+            x = float(ary[4*i+3])
+            y = float(ary[4*i+4])
+            z = float(ary[4*i+5])
+            f = float(ary[4*i+6])
+            #print("pointx: " + str(x) + "pointy: " + str(y))
+            stroke_addpoint((x, y, z, f))
         stroke_end()
     elif ary[1] == 'pen_up':
         device.pen_up()

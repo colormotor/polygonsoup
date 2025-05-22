@@ -22,6 +22,9 @@ cfg = lambda: None
 cfg.morpho_kernel_size = 5
 
 def premultiplied_alpha(alphachannel, rgb):
+    if len(rgb) > 3:
+        alphachannel *= rgb[-1]
+        rgb = rgb[:3]
     return np.array([[np.array([a*rgb[0], a*rgb[1], a*rgb[2], a]) for a in row] for row in alphachannel])
 
 def composite_premultiplied(a, b):

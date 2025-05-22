@@ -9,12 +9,14 @@ import threading
 # import threading
 
 import argparse
-args = argparse.ArgumentParser(description='Axidraw server')
+args = argparse.ArgumentParser(description='GRBL server')
 
 args.add_argument('--device', type=str, default='default',
                  help='''Serial device''')
 args.add_argument('--port', type=int, default=80,
                  help='''Server port number''')
+args.add_argument('--baudrate', type=int, default=115200,
+                 help='''Device baudrate''')
 args.add_argument('--nx', type=int, default=3,
                  help='''Number of horizontal subdivisions for test plots''')
 args.add_argument('--ny', type=int, default=2,
@@ -56,12 +58,37 @@ def wait_for_response(s):
         if read:
             break
 
+def find_cnc_device(baudrate=115200):
+    import serial.tools.list_ports
+    # List all available serial ports
+    ports = serial.tools.list_ports.comports()
+    print(ports)
+    for port in ports:
+        print(f"Checking port: {port.device}")
+        if "usb" in port.device.lower():
+            # Attempt to open the port to verify it's responsive
+            try:
+                with serial.Serial(port.device, baudrate=baudrate, timeout=1) as ser:
+                    # Adjust baudrate to match your machine's settings
+                    ser.write(b"?")  # Example: send a query or any command your device would respond to
+                    response = ser.read(64)  # Read some bytes from the device
+                    print(f"Response from {port.device}: {response}")
+                    # Assuming a valid response confirms this port
+                    return port.device
+            except Exception as e:
+                print(f"Failed to open port {port.device}: {e}")
+    print("No CNC/plotter device found.")
+    return None
+
 class GrblThread(threading.Thread):
     def __init__(self):
-        self.devices = ['/dev/tty.usbserial-10',
-                   '/dev/tty.usbserial-110']
         if cfg.device != 'default':
             self.devices = [cfg.device]
+        else:
+            dev = find_cnc_device(cfg.baudrate)
+            if dev is None:
+                raise ValueError("Could not find plotter")
+            self.devices = [dev]
 
         threading.Thread.__init__(self)
         self.alive = True
@@ -72,7 +99,7 @@ class GrblThread(threading.Thread):
         for dev in self.devices:
             try:
                 print('trying ' + dev)
-                s = serial.Serial(dev, 115200)
+                s = serial.Serial(dev, cfg.baudrate)
                 print('successfully connected to device :' + dev)
                 break
             except (FileNotFoundError, serial.serialutil.SerialException) as e:
@@ -84,6 +111,7 @@ class GrblThread(threading.Thread):
         # Wake up grbl
         if cfg.init:
             print("Initializing grbl...")
+            print("$$ for parameters")
             s.write("\r\n\r\n".encode())
         wait_for_response(s)
         # Wait for grbl to initialize and flush startup text in serial input

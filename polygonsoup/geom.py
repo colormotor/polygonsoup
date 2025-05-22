@@ -434,6 +434,44 @@ def transform_to_rect(shape, rect, padding=0., axis=None):
     src_rect = bounding_box(shape)
     return affine_transform(rect_in_rect_transform(src_rect, rect, padding, axis), shape)
 
+def grid_points(rect, size, centered=True, flatten=True, get_spacing=False):
+    l, t  = rect[0]
+    r, b = rect[1]
+
+    w, h = rect[1] - rect[0]
+    if is_number(size):
+        nx = size
+        ny = int(h/ (w/nx))
+    else:
+        nx, ny = size
+
+    nx, ny = (nx-1), (ny-1)
+    w_inc = w / (nx+1)
+    h_inc = h / (ny+1)
+
+    if centered==True:
+        l = l+w_inc*0.5
+        r = r-w_inc*0.5
+        t = t+h_inc*0.5
+        b = b-h_inc*0.5
+
+    X = np.linspace(l, r, nx+1)
+    Y = np.linspace(t, b, ny+1)
+
+    grid = [[np.array([x,y]) for x in X]
+                for y in Y]
+
+    if get_spacing:
+        if flatten:
+            return sum(grid, []), w_inc, h_inc
+        else:
+            return grid, w_inc, h_inc
+    else:
+        if flatten:
+            return sum(grid, [])
+        else:
+            return grid
+
 def rect_grid(rect, nrows, ncols, margin=0, padding=0, flatten=True):
     rect = pad_rect(rect, margin)
     w, h = rect_size(rect)
@@ -841,7 +879,13 @@ class shapes:
                                     for th in np.linspace(0, np.pi*2, subd)[:-1]]))
 
     @staticmethod
-    def star(radius, ratio_inner=1.0, n=5, center=[0,0]):
+    def star(*args, ratio_inner=1.0, n=5, center=[0,0]):
+        if len(args)==1:
+            radius = args[0]
+        elif len(args)==2:
+            center, radius = args
+        else:
+            raise ValueError('Wrong number of args')
         n = int(max(n, 3))
         th = np.linspace(0, np.pi*2, n*2+1)[:-1] - np.pi / (n*2)
         R = [radius, radius/(1.618033988749895+1)*ratio_inner]
@@ -853,8 +897,8 @@ class shapes:
         return P
 
     @staticmethod
-    def circle(center, r, subd=80):
-        return close_path(np.array([vec(np.cos(th), np.sin(th))*r + center
+    def circle(center, r, subd=80, start_ang=0):
+        return close_path(np.array([vec(np.cos(th+start_ang), np.sin(th+start_ang))*r + center
                                     for th in np.linspace(0, np.pi*2, subd)[:-1]]))
 
     @staticmethod
@@ -1054,6 +1098,25 @@ def planar_graph(polylines, get_faces=False, progress=iter_pass):
         faces = [face_indices(face, index_map) for face in arr.faces]
         return G, np.array(vertices), [f for f in faces if f]
     return G, vertices
+
+def face_graph(G, faces):
+    import networkx as nx
+    edge_to_faces = {}
+    # edge -> shared faces
+    for i, face in enumerate(faces):
+        for u, v in zip(face, face[1:] + face[:1]):
+            e = tuple(sorted((u, v)))
+            edge_to_faces.setdefault(e, set()).add(i)
+    dual = nx.Graph()
+    dual.add_nodes_from(range(len(faces)))
+
+    for edge_faces in edge_to_faces.values():
+        if len(edge_faces) == 2:
+            a, b = edge_faces
+            dual.add_edge(a, b)
+    return dual
+
+planar_graph_dual = face_graph
 
 def curvature(P, closed=0):
     ''' Contour curvature'''

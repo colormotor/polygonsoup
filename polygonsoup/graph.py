@@ -121,3 +121,47 @@ def incident_branches(G, n, branches=[]):
 
 def branch_contour(branch, pos):
     return np.array([pos[n] for n in branch])
+
+def approx_two_coloring(dual, weights=None, greedy=False, seed=3):
+    if not nx.is_connected(dual):
+        comps = [dual.subgraph(c) for c in nx.connected_components(dual)]
+        res = {}
+        for comp in comps:
+            if len(comp.nodes()) > 2:
+                res.update(approx_two_coloring(comp, weights, greedy, seed=seed))
+            else:
+                res.update({n:(i%2) for i, n in enumerate(comp.nodes())})
+        return res
+
+
+    if weights is None:
+        weights = {n:1 for n in dual.nodes}
+
+    # Build weighted adjacency matrix
+    W = nx.Graph()
+    for u, v in dual.edges():
+        W.add_edge(u, v, weight=(weights[u] + weights[v]) / 2)
+
+    # Get the weighted adjacency matrix
+    # https://arxiv.org/pdf/0806.1978
+    nodes = list(W.nodes)
+    if not greedy:
+        A = nx.to_numpy_array(W, weight='weight')
+        D12 = np.diag([1/np.sqrt(W.degree(n)) for n in W.nodes])
+        eigvals, eigvecs = np.linalg.eigh(D12@A@D12)
+        V = eigvecs[:, 0]  # eigenvector for smallest eigenvalue
+        # Partition nodes by sign of the leading eigenvector
+        cut_A = set()
+        cut_B = set()
+        for i, val in enumerate(V):
+            if val >= 0:
+                cut_A.add(nodes[i])
+            else:
+                cut_B.add(nodes[i])
+    else:
+        _, (cut_A, cut_B) = nx.approximation.one_exchange(W, seed=seed, weight='weight')
+
+    coloring = {}
+    for node in dual.nodes():
+        coloring[node] = 0 if node in cut_A else 1
+    return coloring

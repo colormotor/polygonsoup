@@ -73,9 +73,9 @@ def fmod1(v):
     return v
 
 # https://www.procjam.com/tutorials/en/color/
-def adic(n, offset, s=1, v=1):
+def adic(n, offset, s=1, v=1, scale=1):
     hues = []
-    size = 1/n
+    size = (1/n)*scale
     for i in range(n):
         h = i*size
         hues.append(np.array(fmod1(h+offset)))
@@ -96,7 +96,7 @@ def rectangle(h1, split=0.1, s=1, v=1):
          fmod1(fmod1(h1 - 0.5) - split)]
     return [hsv_to_rgb([h, s, v]) for h in H]
 
-def perturb(rgb, h_offset=0.05, s_offset=0.05, v_offset=0.05):
+def perturb(rgb, h_offset=0.01, s_offset=0.01, v_offset=0.01):
     h, s, v = rgb_to_hsv(rgb)
     h = fmod1(h + np.random.normal()*h_offset)
     s = np.clip(s - abs(np.random.normal()*s_offset), 0, 1) # np.random.uniform(0, s_offset))
