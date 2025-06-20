@@ -233,6 +233,12 @@ class GrblDevice(threading.Thread):
         if newchunk:
             lock.release()
 
+    def pen_to(self, val):
+        val = np.clip(float(val), 0.0, MAX_PD)
+        lock.acquire()
+        self.chunks.append(['G0 Z%.2f'%val]) # F{cfg.feedrate_pen}')
+        lock.release()
+
     def pen_down(self, newchunk=True):
         if newchunk:
             lock.acquire()
@@ -350,13 +356,79 @@ class GrblDevice(threading.Thread):
         f.close()
         #print('\n'.join(chunks))
 
-    def home(self):
+
+    def motors_off(self):
+        lock.acquire()
+        self.s.write(b'$1=0\n')
+        wait_for_response(self.s, 'motors off', 10.0)
+        time.sleep(0.1)
+        # relative move of zero
+        self.s.write(b'G91\n')
+        self.s.write(b'G0 X0 Y0 Z0\n')
+        # absolute
+        self.s.write(b'G90\n')
+        print('motors off')
+        time.sleep(0.2)
+        wait_for_response(self.s, 'motors off', 10.0)
+        lock.release()
+
+    def null_move(self, delay=0.1):
+        # Dummy move to re-energize motors
+        self.s.write(b'G91\n')
+        self.s.write(b'G0 X0.01\n')
+        self.s.write(b'G0 X-0.01\n')
+        self.s.write(b'G90\n')
+        self.s.flush()
+        time.sleep(delay)
+        wait_for_response(self.s, 'null move', 10.0)
+
+    def motors_switch(self, state):
+        ''' Turn motors on/off
+        '''
+        # Hacky GRBL version, since we don't have a way to turn off motors explictly
+        lock.acquire()
+
+        # Set idle delay to "never turn off"
+        if state:
+            self.s.write(b'$1=255\n')
+        else:
+            self.s.write(b'$1=0\n')
+        time.sleep(0.2)
+        self.s.flush()
+        wait_for_response(self.s, 'set hold delay', 10.0)
+
+        self.null_move()
+
+        # Reset current position
+        self.s.write(b'G92 X0 Y0 Z0\n')
+        time.sleep(0.2)
+        self.s.flush()
+
+        if state:
+            print('motors on')
+        else:
+            print('motors off')
+
+        wait_for_response(self.s, 'set zero', 10.0)
+
+        # # Optional: clear serial buffer
+        # while self.s.in_waiting:
+        #     print(self.s.readline().decode().strip())
+
+        lock.release()
+
+    def home(self, enable_motors=True):
         lock.acquire()
         self.chunks = [[]]
+        if enable_motors:
+            self.s.write(b'$1=255\n')
+            time.sleep(0.1)
         self.s.write(b'$H\n')
         wait_for_response(self.s, 'homing', 60.0)
         self.s.write(b'G92 X0 Y0 Z0\n')
+
         wait_for_response(self.s, 'set initial pos', 10.0)
+
         #self.chunks[-1].append('$H')
         #self.chunks[-1].append('G92 X0 Y0 Z0')
         lock.release()
@@ -506,6 +578,9 @@ def pathcmd(*ary):
     elif ary[1] == 'pen_up':
         device.pen_up()
         print('received pen up')
+    elif ary[1] == 'pen_to':
+        device.pen_to(ary[2])
+        print('received pen to')
     elif ary[1] == 'pen_down':
         device.pen_down()
         print('received pen down')
@@ -566,6 +641,10 @@ try:
             if ary[0] == "PATHCMD":
                 #print(ary)
                 pathcmd(*ary)
+            elif ary[0] == 'OFF':
+                device.motors_switch(0)
+            elif ary[0] == 'ON':
+                device.motors_switch(1)
             elif ary[0] == 'wait':
                 device.wait()
                 resp = 'done\n'.encode('utf-8')

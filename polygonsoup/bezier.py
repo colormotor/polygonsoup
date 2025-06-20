@@ -203,6 +203,33 @@ def spline_to_bezier(tck):
 
     return np.split(c, len(c) // desired_multiplicity)
 
+def catmull_rom_to_bezier(Q, c=0.5, closed=False):
+    ''' Cardinal spline interpolation for a sequence of values'''
+
+    if closed:
+        Q = np.vstack([Q, Q[0:1]])
+    n = len(Q)
+    D = []
+    for k in range(1, n-1):
+        # Assuming uniform parametrisation here
+        d = (1-c)*(Q[k+1] - Q[k-1])
+        D.append(d)
+    if closed:
+        d1 = dn = (1-c)*(Q[1] - Q[-2])
+    else:
+        d1 = (1-c)*(Q[1] - Q[0])
+        dn = (1-c)*(Q[-1] - Q[-2])
+    D = [d1] + D + [dn]
+    P = [Q[0]]
+    for k in range(1, n):
+        p1 = Q[k-1] + D[k-1]/3
+        p2 = Q[k] - D[k]/3
+        p3 = Q[k]
+        P += [p1, p2, p3]
+
+    if closed:
+        P = P[:-1]
+    return np.vstack(P)
 
 def cubic_bspline_to_bezier_chain(P, periodic=False):
     ''' Converts a bspline to a Bezier chain

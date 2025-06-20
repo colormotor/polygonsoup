@@ -245,8 +245,17 @@ class PlotterClient:
             elif len(P[0])==3:
                 self.sendln('PATHCMD stroke3 %d %s'%path_to_str(P))
 
+    def motors_off(self):
+        self.sendln(f'OFF')
+
+    def motors_on(self):
+        self.sendln(f'ON')
+
     def pen_up(self):
         self.sendln('PATHCMD pen_up')
+
+    def pen_to(self, val):
+        self.sendln(f'PATHCMD pen_to {val}')
 
     def pen_down(self):
         self.sendln('PATHCMD pen_down')
