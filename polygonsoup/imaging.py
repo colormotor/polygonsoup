@@ -15,7 +15,12 @@ import polygonsoup.geom as geom
 import pdb
 
 from PIL import Image, ImageDraw, ImageFont
-import cv2
+try:
+    import cv2
+except ModuleNotFoundError as e:
+    print(e)
+    print("you need to intall OpenCV")
+
 import numpy as np
 
 cfg = lambda: None

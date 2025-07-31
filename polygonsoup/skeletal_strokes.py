@@ -15,6 +15,8 @@ Hsu (1984) Skeletal Strokes
 import polygonsoup.geom as geom
 import numpy as np
 from scipy.interpolate import splprep, splev
+import pdb
+
 
 def curved_skeletal_stroke(prototype, spine_, widths, closed=False, smooth_k=0, degree=3, xfunc=lambda t: t):
     '''Simplified warping along a spine assumed to be a relatively smooth curve'''
@@ -142,12 +144,12 @@ def fat_path(P, W, closed=False, miter_limit=2, angle_thresh=160):
     if W.ndim < 2:
         W = np.vstack([W, W]).T
 
-    for i in I:
-        plut.fill_circle(P[i], 0.5, 'r')
+    #for i in I:
+    #    plut.fill_circle(P[i], 0.5, 'r')
     m = len(D)
     frames = []
     frame_count = m if closed else m - 1
-
+    #pdb.set_trace()
     # local coordinate frames
     for i in range(frame_count):
         p = P[(i + 1)%m]

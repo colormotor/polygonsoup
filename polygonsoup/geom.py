@@ -24,18 +24,29 @@ def is_number(x):
 def is_compound(S):
     '''Returns True if S is a compound polyline,
     a polyline is represented as a list of points, or a numpy array with as many rows as points'''
-    if type(S) != list:
-        return False
-    if type(S) == list: #[0])==list:
-        if not S:
-            return True
-        if is_number(S[0][0]):
+    try:
+        if type(S) != list:
             return False
-        return True
-    if type(S[0])==np.ndarray and len(S[0].shape) > 1:
-        return True
-    return False
+        if type(S) == list: #[0])==list:
+            if not S:
+                return True
+            for P in S:
+                try:
+                    if is_number(P[0]):
+                        return False
+                except IndexError:
+                    pass
+            # if is_number(S[0][0]):
+            #     return False
+            return True
+        if type(S[0])==np.ndarray and len(S[0].shape) > 1:
+            return True
+        return False
+    except IndexError:
+        import pdb
+        pdb.set_trace()
 
+        return False
 def is_polyline(P):
     '''A polyline can be represented as either a list of points or a NxDim array'''
     if (type(P[0]) == np.ndarray and
@@ -429,10 +440,15 @@ def rect_in_rect_transform(src, dst, padding=0., axis=None):
     M = np.dot(M, trans_2d(-cenp_src))
     return M
 
-def transform_to_rect(shape, rect, padding=0., axis=None):
+def transform_to_rect(shape, rect, padding=0., offset=[0,0], axis=None):
     ''' transform a shape or polyline to dest rect'''
     src_rect = bounding_box(shape)
-    return affine_transform(rect_in_rect_transform(src_rect, rect, padding, axis), shape)
+    return affine_transform(trans_2d(offset)@rect_in_rect_transform(src_rect, rect, padding, axis), shape)
+
+# def transform_to_rect(shape, rect, padding=0., axis=None):
+#     ''' transform a shape or polyline to dest rect'''
+#     src_rect = bounding_box(shape)
+#     return affine_transform(rect_in_rect_transform(src_rect, rect, padding, axis), shape)
 
 def grid_points(rect, size, centered=True, flatten=True, get_spacing=False):
     l, t  = rect[0]
@@ -699,6 +715,25 @@ def affine_mul(mat, data):
     return affine_transform(mat, data) # For backwards compat
 
 tsm = affine_transform
+
+def projection(mat, data):
+    if is_empty(data):
+        return data
+    if is_polyline(data):
+        P = np.array(data)
+        dim = P[0].size
+        P = np.vstack([P.T, np.ones(len(P))])
+        P = mat @ P
+        P /= P[-1]
+        return P[:dim].T
+    elif is_compound(data):
+        return [projection(mat, P) for P in data]
+    else:
+        dim = len(data)
+        p = np.concatenate([data, [1]])
+        p = mat @ p
+        p /= p[-1]
+        return p[:dim]
 
 def clip_3d(p, q):
     ''' Liang-Barsky homogeneous line clipping to canonical view volume '''

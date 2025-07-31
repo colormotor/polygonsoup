@@ -84,7 +84,7 @@ class AxiPlotter:
 
 class PlotterClient:
     ''' Plots to a remote instance of axidraw_server.py'''
-    def __init__(self, address_or_settings='localhost', port=80, raw=False): #, blocking=False):
+    def __init__(self, address_or_settings='localhost', port=80, raw=False, use_feedrate=False): #, blocking=False):
         """
         :param address_or_settings:  (Default value = './client_settings.json') This parameter can specify either an IP address for a server,
         or the path to a json file containing the connection settings. The json file must contain the entries 'address' and 'port' with
@@ -115,6 +115,10 @@ class PlotterClient:
         self.bounds = None
         self.raw = raw
         self.print_err = True
+        if use_feedrate:
+            self.drawing_start_feed()
+        else:
+            self.drawing_start()
 
     def __enter__(self):
         self.open()
@@ -245,11 +249,28 @@ class PlotterClient:
             elif len(P[0])==3:
                 self.sendln('PATHCMD stroke3 %d %s'%path_to_str(P))
 
+    def draw_path(self, P, has_feedrate=False):
+        if not len(P):
+            return
+        if has_feedrate:
+            if len(P[0])==3:
+                self.sendln('PATHCMD path %d %s'%path_to_str(P))
+            elif len(P[0])==4:
+                self.sendln('PATHCMD path %d %s'%path_to_str(P))
+        else:
+            if len(P[0])==2:
+                self.sendln('PATHCMD path %d %s'%path_to_str(P))
+            elif len(P[0])==3:
+                self.sendln('PATHCMD path %d %s'%path_to_str(P))
+
     def motors_off(self):
         self.sendln(f'OFF')
 
     def motors_on(self):
         self.sendln(f'ON')
+
+    def goto(self, pos):
+        self.sendln(f'PATHCMD goto {pos[0]} {pos[1]}')
 
     def pen_up(self):
         self.sendln('PATHCMD pen_up')
