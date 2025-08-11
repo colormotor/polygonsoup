@@ -576,13 +576,30 @@ def get_default_colors():
     #return plt.get_cmap('tab20').colors + plt.get_cmap('tab20b').colors + plt.get_cmap('tab20c').colors
     #return plt.rcParams['axes.prop_cycle'].by_key()['color'] + list(plt.get_cmap('tab20').colors) + list(plt.get_cmap('tab20b').colors) + list(plt.get_cmap('tab20c').colors)
 
-def categorical(name=None):
+def categorical_palette(name=None):
+    if type(name)==list:
+        return name
     if name is None:
-        name = palette_name
+        name = default_palette_name
     return categorical_palettes[name]
 
-def categorical_cmap(name=None):
-    return ListedColormap(categorical(name))
+def categorical(i, palette=None, rep=1):
+    clrs = categorical_palette(palette)
+    return mpl.colors.to_rgb(clrs[i%len(clrs)])
+
+    return categorical_cmap(name, rep)
+
+def categorical_cmap(name=None, rep=1):
+    return ListedColormap(categorical_palette(name)*rep)
+
+
+# def categorical(name=None):
+#     if name is None:
+#         name = palette_name
+#     return categorical_palettes[name]
+
+# def categorical_cmap(name=None):
+#     return ListedColormap(categorical(name))
 
 def default_color(i):
     clrs = get_default_colors() #plt.rcParams['axes.prop_cycle'].by_key()['color']

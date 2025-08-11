@@ -110,6 +110,14 @@ def randomize(palette, n, h_offset=0.05, s_offset=0.2, v_offset=0.2):
         res.append(perturb(rgb, h_offset, s_offset, v_offset))
     return res
 
+def brightness_contrast(rgb, brightness=0.0, contrast=1.0):
+    rgb = np.array(rgb)
+    rgb_adj = (rgb - 0.5) * contrast + 0.5 + brightness
+    return np.clip(rgb_adj, 0, 1)
+
+def palette_brightness_contrast(colors, brightness=0.0, contrast=1.0):
+    return [brightness_contrast(color, brightness, contrast) for color in colors]
+
 def brightness(rgb, w):
     hsv = rgb_to_hsv(rgb)
     hsv[2] = np.clip(hsv[2]*w, 0, 1)
