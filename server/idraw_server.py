@@ -45,6 +45,9 @@ print(sys.argv)
 RX_BUFFER_SIZE = 128 # 100 #128
 MAX_PD = 9.0
 
+connection = None # Socket connection
+send_queue = []
+
 lock = threading.Lock()
 
 state = lambda: None
@@ -111,7 +114,8 @@ def find_cnc_device(baudrate=115200):
     print(ports)
     for port in ports:
         print(f"Checking port: {port.device}")
-        if "usb" in port.device.lower():
+        print(port.vid, port.pid)
+        if "usb" in port.device.lower() and (port.vid, port.pid)==(6790, 32832):
             # Attempt to open the port to verify it's responsive
             try:
                 with serial.Serial(port.device, baudrate=baudrate, timeout=1) as ser:
@@ -230,7 +234,7 @@ class GrblDevice(threading.Thread):
 
         self.command('G21') # millimeters
         self.command('G17') # Xy
-        #self.command('G90') # Absolute
+        self.command('G90') # Absolute
         self.feedrate(cfg.feedrate)
         time.sleep(0.1)
         print("Setting feedrate to ", cfg.feedrate)
@@ -271,7 +275,18 @@ class GrblDevice(threading.Thread):
                 c_line = []
                 error_count = 0
 
+                wait_send_count = None
+                send_line = ''
+
                 for line in lines:
+                    if line[0] == '#': # Message out
+                        wait_send_count = l_count
+                        send_line = line
+
+                        #send_queue.append(line)
+                        #if connection is not None:
+                        #    connection.send(f'{line}\n'.encode('utf-8'))
+                        continue
                     # while self.paused:
                     #     time.sleep(0.5)
                     l_count += 1
@@ -280,18 +295,36 @@ class GrblDevice(threading.Thread):
                     c_line.append(len(l_block) + 1)
                     grbl_out = ''
 
-                    while sum(c_line) >= RX_BUFFER_SIZE - 1 or s.in_waiting:
-                        out_temp = s.readline().strip().decode('utf-8')
-                        if 'ok' not in out_temp and 'error' not in out_temp:
-                            print("  Debug: ", out_temp)
-                        else:
-                            grbl_out += out_temp
-                            g_count += 1
-                            grbl_out += str(g_count)
-                            if c_line:
-                                del c_line[0]
+                    wait = False
 
-                    
+                    while True:
+                        while sum(c_line) >= RX_BUFFER_SIZE - 1 or s.in_waiting:
+                            out_temp = s.readline().strip().decode('utf-8')
+                            if 'ok' not in out_temp and 'error' not in out_temp:
+                                print("  Debug: ", out_temp)
+                            else:
+                                grbl_out += out_temp
+                                g_count += 1
+
+                                grbl_out += str(g_count)
+                                if c_line:
+                                    del c_line[0]
+
+                        if wait_send_count is not None and send_line:
+                            if l_count > wait_send_count:
+                                if g_count < wait_send_count:
+                                    #print('Lcount', l_count)
+                                    #print('Waiting to reach ', wait_send_count, 'at', g_count)
+                                    continue
+                                else:
+                                    wait_for_idle(s, "To send line " + line)
+                                    print("Sending", send_line)
+                                    send_queue.append(send_line)
+                                    wait_send_count = None
+                                    send_line = ''
+
+                        break
+
                     verbose = True
                     if verbose:
                         print(f"{l_count-1} >>> {l_block}", end=' ')
@@ -344,7 +377,8 @@ class GrblDevice(threading.Thread):
     def pen_to(self, val):
         val = np.clip(float(val), 0.0, MAX_PD)
         lock.acquire()
-        self.chunks.append(['G1G91 Z%.2f'%(val - state.pos[2])]) # F{cfg.feedrate_pen}')
+        #self.chunks.append(['G1G91 Z%.2f'%(val - state.pos[2])]) # F{cfg.feedrate_pen}')
+        self.chunks.append(['G1 Z%.2f'%(val)]) # F{cfg.feedrate_pen}')
         state.pos[2] = val
         lock.release()
         #wait_for_idle(self.s, False)  # Ensure GRBL is idle after pen up
@@ -353,9 +387,8 @@ class GrblDevice(threading.Thread):
         lock.acquire()
         pos = np.array(pos)
         pos[1] = -pos[1]  # Invert Y coordinate for GRBL compatibility
-        d = pos - state.pos[:2]
-
-        self.chunks.append(['G1G91 X%.2f Y%.2f'%(d[0], d[1])]) # F{cfg.feedrate_pen}')
+        self.chunks.append(['G1 X%.2f Y%.2f'%(pos[0], pos[1])]) # F{cfg.feedrate_pen}')
+        #self.chunks.append(['G1G91 X%.2f Y%.2f'%(d[0], d[1])]) # F{cfg.feedrate_pen}')
         state.pos[:2] = pos[:2]  # Update X, Y position
         lock.release()
         #wait_for_idle(self.s, False)  # Ensure GRBL is idle after pen up
@@ -364,7 +397,9 @@ class GrblDevice(threading.Thread):
         if newchunk:
             lock.acquire()
             self.chunks.append([])
-        self.chunks[-1].append(f'G0G91 Z{cfg.pd - state.pos[2]}') # F{cfg.feedrate_pen}')
+        self.chunks[-1].append(f'G0 Z{cfg.pd}') # F{cfg.feedrate_pen}')
+        self.chunks[-1].append('#pd')
+        #self.chunks[-1].append(f'G0G91 Z{cfg.pd - state.pos[2]}') # F{cfg.feedrate_pen}')
         state.pos[2] = cfg.pd
         if newchunk:
             lock.release()
@@ -374,7 +409,9 @@ class GrblDevice(threading.Thread):
         if newchunk:
             lock.acquire()
             self.chunks.append([])
-        self.chunks[-1].append(f'G0G91 Z{cfg.pu - state.pos[2]}') # F{cfg.feedrate_pen}')
+        #self.chunks[-1].append(f'G0G91 Z{cfg.pu - state.pos[2]}') # F{cfg.feedrate_pen}')
+        self.chunks[-1].append(f'G0 Z{cfg.pu}') # F{cfg.feedrate_pen}')
+        self.chunks[-1].append('#pu')
         state.pos[2] = cfg.pu
         if newchunk:
             lock.release()
@@ -391,15 +428,17 @@ class GrblDevice(threading.Thread):
 
     def draw_path_feedrate(self, P, newchunk=True):
         raise ValueError('draw_path_feedrate is not implemented, use draw_path instead')
+        P[:,1] = -P[:,1]  # Invert Y coordinate for GRBL compatibility
+
         def pointstr(p):
             #print(len(p))
             #print(p)
             if len(p) == 3:
-                return 'X%.2f Y%.2f F%d'%(p[0], -p[1], int(p[-1]))
+                return 'X%.2f Y%.2f F%d'%(p[0], p[1], int(p[-1]))
             elif len(p) == 2:
-                return 'X%.2f Y%.2f'%(p[0], -p[1])
+                return 'X%.2f Y%.2f'%(p[0], p[1])
             else:
-                return 'X%.2f Y%.2f Z%.2f F%d'%(p[0], -p[1], max(0, min(p[2], MAX_PD)), int(p[-1]))
+                return 'X%.2f Y%.2f Z%.2f F%d'%(p[0], p[1], max(0, min(p[2], MAX_PD)), int(p[-1]))
 
         if newchunk:
             lock.acquire()
@@ -416,6 +455,7 @@ class GrblDevice(threading.Thread):
                 #self.chunks[-1].append('G0 X%.2f Y%.2f'%(p[0], p[1]))
                 # Skip feedrate on first move
                 self.chunks[-1].append('G1 ' + pointstr(p)) #X%.2f Y%.2f'%(p[0], p[1]))
+                self.chunks[-1].append('#startpath')
                 c+=1
                 if len(p) < 4:
                     self.pen_down(False)
@@ -456,24 +496,25 @@ class GrblDevice(threading.Thread):
 
         self.pen_up(newchunk)
         c+=1
-        D = np.diff(np.vstack([state.pos[:P.shape[1]], P]), axis=0)  # Calculate differences between consecutive points
+        #D = np.diff(np.vstack([state.pos[:P.shape[1]], P]), axis=0)  # Calculate differences between consecutive points
 
-        for i, d in enumerate(D):
+        for i, p in enumerate(P):
             if not i:
-                if len(d) > 2:
-                    self.chunks[-1].append('G1G91 ' + pointstr(d[:2])) # + ' F%d'%cfg.feedrate_move) #X%.2f Y%.2f'%(p[0], p[1]))
+                if len(p) > 2:
+                    self.chunks[-1].append('G1G90 ' + pointstr(p[:2])) # + ' F%d'%cfg.feedrate_move) #X%.2f Y%.2f'%(p[0], p[1]))
                     #state.pos[2] += d[2]  # Update Z position
                 #self.chunks[-1].append('G0 X%.2f Y%.2f'%(p[0], p[1]))
-                self.chunks[-1].append('G1G91 ' + pointstr(d)) #X%.2f Y%.2f'%(p[0], p[1]))
-                state.pos[:len(d)] += d[:len(d)]  # Update X, Y a optionally Z position
+                self.chunks[-1].append('G1G90 ' + pointstr(p)) #X%.2f Y%.2f'%(p[0], p[1]))
+                self.chunks[-1].append('#startpath')
+                state.pos[:len(p)] = p[:len(p)]  # Update X, Y a optionally Z position
                 c+=1
-                if len(d) < 3:
+                if len(p) < 3:
                     self.pen_down(newchunk)
                 c+=1
             else:
                 #self.chunks[-1].append('G1 X%.2f Y%.2f F20000.0'%(p[0], p[1])) #F2700.0
-                self.chunks[-1].append('G1G91 ' + pointstr(d)) # + ' F20000.0')
-                state.pos[:len(d)] += d[:len(d)]  # Update X, Y a optionally Z position
+                self.chunks[-1].append('G1 ' + pointstr(p)) # + ' F20000.0')
+                state.pos[:len(p)] = p[:len(p)]  # Update X, Y a optionally Z position
                 c+=1
 
         self.pen_up(newchunk)
@@ -515,7 +556,7 @@ class GrblDevice(threading.Thread):
         self.s.write(b'G91\n')
         self.s.write(b'G0 X0 Y0 Z0\n')
         # absolute
-        self.s.write(b'G91\n')
+        self.s.write(b'G90\n')
         print('motors off')
         time.sleep(0.2)
         wait_for_response(self.s, 'motors off', 10.0)
@@ -526,7 +567,7 @@ class GrblDevice(threading.Thread):
         self.s.write(b'G91\n')
         self.s.write(b'G0 X0.01\n')
         self.s.write(b'G0 X-0.01\n')
-        self.s.write(b'G91\n')
+        self.s.write(b'G90\n')
         #self.s.flush()
         time.sleep(delay)
         wait_for_response(self.s, 'null move', 10.0)
@@ -580,8 +621,11 @@ class GrblDevice(threading.Thread):
         self.s.write(b'G92 X0 Y0 Z0\n') #
         wait_for_response(self.s, 'set initial pos', 10.0)
         wait_for_idle(self.s, 'after homing')  # Ensure GRBL is idle after homing
+
         print('Done homing')
         lock.release()
+        #print('Going to initial pos')
+        #self.goto([600, 0])
         #self.chunks[-1].append('$H')
         #self.chunks[-1].append('G92 X0 Y0 Z0')
 
@@ -624,6 +668,42 @@ def recv(connection):
     #print("remaining sofar is [" + sofar + "]")
     #print("returning [" + ret + "] to caller")
     return ret;
+
+
+def make_line_reader():
+    sofar = ""  # per-connection buffer (not global)
+
+    def recv_line(conn):
+        nonlocal sofar
+        try:
+            # One non-blocking read after select says "readable"
+            chunk = conn.recv(4096)
+            if not chunk:
+                # b'' => peer closed
+                return ""
+            # Optional: handle telnet IAC (0xff) if you really need to
+            if chunk[:1] == b"\xff":
+                return ""
+            sofar += chunk.decode("utf-8", errors="replace")
+
+            # If we have a full line, return it; otherwise tell caller to wait
+            if "\n" in sofar:
+                line, sofar = sofar.split("\n", 1)
+                if line.endswith("\r"):
+                    line = line[:-1]
+                print("Received", line)
+                return line  # real line
+            print("Sofar", sofar)
+            return None      # no complete line yet
+
+        except BlockingIOError:
+            # Non-blocking socket: no data available right now
+
+            return None
+
+    return recv_line
+
+recv_line = make_line_reader()
 
 curpath = []
 paths = []
@@ -676,12 +756,12 @@ def drawing_end():
 
 def pathcmd(*ary):
     #print(ary)
-    if "drawing_start" in ary[1]:
-        print("PCMD: start")
-        drawing_start()
     if "drawing_start_feed" in ary[1]:
         print("PCMD: start")
         drawing_start(True)
+    elif "drawing_start" in ary[1]:
+        print("PCMD: start")
+        drawing_start()
     elif "drawing_end" in ary[1]:
         print("PCMD: end")
         drawing_end()
@@ -774,7 +854,44 @@ def pathcmd(*ary):
         #     print('sending command ' + ary[1][1:])
         #     device.command(ary[1][1:])
 
-import socket,os
+
+def recv(connection):
+    global sofar
+    closed = False
+
+    try:
+        data = connection.recv(4096)
+    except BlockingIOError:
+        # nothing to read right now
+        return None, False
+
+    if not data:
+        # peer closed connection
+        if sofar:
+            # deliver whatever is left (even without newline)
+            buf = sofar
+            print("Closing, flushing", buf)
+            sofar = ""
+            return buf, False
+        return None, True
+
+    # optional: strip telnet negotiation junk
+    # if data and data[0] == 0xff:
+    #     return None, False
+
+    sofar += data.decode("utf-8", "replace")
+
+    off = sofar.rfind("\n")
+    if off != -1:
+        buf = sofar[:off].rstrip()
+        print("Parsed: ", buf)
+        sofar = sofar[off+1:]
+        print("remaining stuff:", sofar)
+        return buf, False
+
+    return None, closed
+
+import socket, os, select
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 print('Grbl server, binding socket to port %d'%(cfg.port))
 sock.bind(('', cfg.port))  # CHANGE PORT NUMBER HERE!
@@ -785,56 +902,103 @@ sock.listen(5)
 
 try:
     while True:
-        connection,address = sock.accept()
-        sendit = lambda string: connection.send(string.encode("utf-8"))
-        #print("got connection")
-        sofar = "";
-        while True:
+        connection, address = sock.accept()
+        connection.setblocking(False)
 
-            buf = recv(connection)
-            if buf is None: break
-            source = ""
-            if(buf == "\""):
-                #print("starting some python code")
-                while True:
-                    buf = recv(connection)
-                    if buf is None: break
-                    if(buf == "\""):
-                        #print("doing exec of:\n" + source)
-                        # DANGEROUS on public networks!!!!
-                        # uncomment for python interface
-                        #exec(source)
+        sendit = lambda string: connection.send(string.encode("utf-8"))
+        print("accepted connection")
+        sofar = "";
+        rxbuf = bytearray()
+
+        partial_out = b''
+
+        while True:
+            #time.sleep(1/60)
+            want_write = bool(send_queue or partial_out)
+            if want_write:
+                print("I want to write")
+            #else:
+            #    print("Dont wanna write")
+            rlist = [connection]
+            wlist = [connection] if want_write else []
+            rready, wready, _ = select.select(rlist, wlist, [], 1/60)
+
+            if wready:
+                print("Write ready")
+                if not partial_out and send_queue:
+                    # load next line to send
+                    partial_out = (send_queue.pop(0) + "\n").encode('utf-8')
+
+                if partial_out:
+                    print("Sending out", partial_out)
+                    try:
+                        n = connection.send(partial_out)
+                        partial_out = partial_out[n:]
+                    except (BrokenPipeError, ConnectionResetError):
+                        print("Client disconnected while sending")
                         break
-                    source += buf + "\n"
-            if source != "": continue
-            if buf is None: break
-            ary = buf.split(" ")
-            #print("cmd ary:")
-            # print(ary)
-            # print(ary[0])
-            if ary[0] == "PATHCMD":
-                #print(ary)
-                pathcmd(*ary)
-            elif ary[0] == 'OFF':
-                device.motors_switch(0)
-            elif ary[0] == 'ON':
-                device.motors_switch(1)
-            elif ary[0] == 'wait':
-                device.wait()
-                resp = 'done\n'.encode('utf-8')
-                connection.send(resp)
-            else:
-                cmd = ' '.join(ary)
-                if cmd == 'sleep':
-                    #print('sleeping half sec')
-                    time.sleep(0.5)
+
+            # if send_queue:
+            #     while send_queue:
+            #         print(send_queue)
+            #         line = send_queue.pop(0)
+            #         try:
+            #             print('Sending ', line)
+            #             connection.send(f'{line}\n'.encode('utf-8'))
+            #         except (BrokenPipeError, ConnectionResetError) as e:
+            #             print(e)
+            #         time.sleep(0.01)
+            if rready:
+                print("Receiving")
+                try:
+                    buf, closed = recv(connection)
+                except ConnectionResetError as e:
+                    print(e)
+                    break
+
+                if closed:
+                    print("Connection closed by peer")
+                    break
+
+                if buf is None:
+                    continue
+
+                print('-- Received:', buf)
+
+                lines = buf.splitlines()
+                for line in lines:
+                    ary = line.split(" ")
+                    #print("cmd ary:")
+                    # print(ary)
+                    # print(ary[0])
+                    if ary[0] == "PATHCMD":
+                        #print(ary)
+                        pathcmd(*ary)
+                    elif ary[0] == 'OFF':
+                        device.motors_switch(0)
+                    elif ary[0] == 'ON':
+                        device.motors_switch(1)
+                    elif ary[0] == 'wait':
+                        device.wait()
+                        resp = 'done\n'.encode('utf-8')
+                        connection.send(resp)
+                    else:
+                        cmd = ' '.join(ary)
+                        if cmd == 'sleep':
+                            #print('sleeping half sec')
+                            time.sleep(0.5)
+                        else:
+                            pass
+                            #print('executing command: ' + cmd)
+                            #response = device.command(cmd)
+                            #
+                        #print("device response: " + response)
+                        # response += "\n"
+                        # response = response.encode('utf-8')
+                        # connection.send(response)
                 else:
-                    print('executing command: ' + cmd)
-                    response = device.command(cmd)
-                #print("device response: " + response)
-                # response += "\n"
-                # response = response.encode('utf-8')
-                # connection.send(response)
+                    pass #print('nothing to read')
+            # time.sleep(0.01)
         #print("connection closed")
         connection.close()
 
