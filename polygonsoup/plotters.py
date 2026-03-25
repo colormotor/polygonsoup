@@ -126,6 +126,8 @@ class PlotterClient:
         self.print_err = True
         self.home_pos = home_pos
 
+        self.callback_trigger = ''
+
         # --- Listener state (single reader model) ---
         self._listener_thread = None
         self._listener_running = threading.Event()
@@ -158,7 +160,7 @@ class PlotterClient:
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.sock.connect(server_address)
             self.sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-            print("Openng socket")
+            print("Opening socket")
             self.socket_open = True
         except ConnectionRefusedError as e:
             if self.print_err:
@@ -167,6 +169,7 @@ class PlotterClient:
                 self.print_err = False
             self.sock = None
             self.socket_open = False
+        print("Connected")
 
     def close(self):
         print('Closing socket')
@@ -194,6 +197,9 @@ class PlotterClient:
         if callback is not None and not callable(callback):
             raise TypeError("callback must be callable or None")
         self._on_hash_line = callback
+
+    def is_listening(self):
+        return self._listener_running.is_set()
 
     def start_listening(self, callback=None, poll_interval=0.1):
         """
@@ -223,6 +229,11 @@ class PlotterClient:
 
     def _listen_loop(self, poll_interval):
         while self._listener_running.is_set():
+            if self.callback_trigger:
+                print("Trigger")
+                self._on_hash_line(self.callback_trigger)
+                self.callback_trigger = ''
+
             if not self.socket_open or self.sock is None:
                 # sleep a tick and try again
                 select.select([], [], [], poll_interval)

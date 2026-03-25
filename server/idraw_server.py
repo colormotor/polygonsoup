@@ -317,7 +317,9 @@ class GrblDevice(threading.Thread):
                                     #print('Waiting to reach ', wait_send_count, 'at', g_count)
                                     continue
                                 else:
-                                    wait_for_idle(s, "To send line " + line)
+                                    # Wait unless this is a "z" coordinate
+                                    if '#z' not in line:
+                                        wait_for_idle(s, "To send line " + line)
                                     print("Sending", send_line)
                                     send_queue.append(send_line)
                                     wait_send_count = None
@@ -516,7 +518,9 @@ class GrblDevice(threading.Thread):
                 self.chunks[-1].append('G1 ' + pointstr(p)) # + ' F20000.0')
                 state.pos[:len(p)] = p[:len(p)]  # Update X, Y a optionally Z position
                 c+=1
-
+            if len(p) > 2:
+                self.chunks[-1].append('#z%.2f'%p[2])
+        self.chunks[-1].append('#endpath')
         self.pen_up(newchunk)
         c+=1
         #if newchunk:

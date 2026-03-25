@@ -303,6 +303,8 @@ def bounding_box(S, padding=0):
     bmax = np.max([np.max(V, axis=0) for V in S if len(V)], axis=0)
     return [bmin - padding, bmax + padding]
 
+bbox = bounding_box
+
 def rect_w(rect):
     return (np.array(rect[1]) - np.array(rect[0]))[0]
 
@@ -320,6 +322,8 @@ def pad_rect(rect, pad):
 
 def make_rect(x, y, w, h):
     return [np.array([x, y]), np.array([x+w, y+h])]
+
+rect = make_rect
 
 def make_centered_rect(p, size):
     return make_rect(p[0] - size[0]*0.5, p[1] - size[1]*0.5, size[0], size[1])
@@ -579,6 +583,11 @@ def shear_2d(xy, affine=True):
     m[0,1] = xy[0]
     m[1,0] = xy[1]
     return m
+
+t2d = trans_2d
+r2d = rot_2d
+s2d = scaling_2d
+sh2d = shear_2d
 
 # 3d transformations (affine)
 def rotx_3d (theta, affine=True):
@@ -1176,7 +1185,8 @@ def curvature(P, closed=0):
     return K
 #endf
 
-def uniform_sample( X, delta_s, closed=0, kind='slinear', data=None, inv_density=None, density_weight=0.5 ):
+def uniform_sample( X, delta_s, closed=0, kind='slinear', data=None,
+                    inv_density=None, density_weight=0.5, eps=1e-10 ):
     ''' Uniformly samples a contour at a step dist'''
     if closed:
         X = np.vstack([X, X[0]])
@@ -1187,9 +1197,11 @@ def uniform_sample( X, delta_s, closed=0, kind='slinear', data=None, inv_density
     # chord lengths
     s = np.sqrt(D[:,0]**2 + D[:,1]**2)
     # Delete values in input with zero distance (due to a bug in interp1d)
-    I = np.where(s==0)
-    X = np.delete(X, I, axis=0)
-    s = np.delete(s, I)
+    I = np.where(s < eps) #s==0)
+    if len(I[0]):
+        X = np.delete(X, I, axis=0)
+        s = np.delete(s, I)
+
     # if inv_density is not None:
     #     inv_density = np.delete(inv_density, I)
 

@@ -45,7 +45,6 @@ def conv_to(S):
     return tuple([tuple([(int(x*cfg.scale),int(y*cfg.scale)) for x, y in P]) for P in S])
     #return [[(int(x*cfg.scale),int(y*cfg.scale)) for x, y in P.T] for P in S] # tuple([tuple([(int(x*cfg.scale),int(y*cfg.scale)) for x, y in P.T]) for P in S])
 
-
 def offset(S, amt, join_type='miter', end_type='closed_polygon', miter=2):
     ''' Offset one or more polylines.
         join_type can be one of 'miter', 'square', 'round'

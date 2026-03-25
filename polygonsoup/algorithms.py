@@ -15,11 +15,13 @@ from collections import defaultdict, namedtuple
 
 class DoublyLinkedList:
     class Node:
-        ''' Generic linked list node
-        Either define a class with prev, next or use this and populate'''
-        def __init__(self):
+        """Generic linked list node.
+        Either define a class with prev/next or use this and populate."""
+        def __init__(self, **kwargs):
             self.prev = None
             self.next = None
+            for key, value in kwargs.items():
+                setattr(self, key, value)
 
     def __init__(self):
         self.clear()

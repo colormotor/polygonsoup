@@ -50,10 +50,16 @@ def relevance(s, index, peri, keep):
     l1 = np.sqrt(seg1x*seg1x + seg1y*seg1y)
     l2 = np.sqrt(seg2x*seg2x + seg2y*seg2y)
 
+    # if l1*l2 < 1e-10:
+    #     return 0.
+
     # turning angle (0-180)
-    av = (np.dot(np.hstack([seg1x, seg1y]),np.vstack([seg2x,seg2y])))/l1/l2
-    if np.isnan(av):
-        return 0.
+    try:
+        av = (np.dot([seg1x, seg1y], [seg2x,seg2y]))/l1/l2
+        if np.isnan(av):
+            return 0.
+    except ValueError as e:
+        raise e
 
     if np.isnan(av):
         print('dce::relevance, Nan in turning angle computation')
